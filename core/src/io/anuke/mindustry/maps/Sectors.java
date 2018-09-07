@@ -8,6 +8,7 @@ import com.badlogic.gdx.utils.Array;
 import io.anuke.mindustry.content.Items;
 import io.anuke.mindustry.core.GameState.State;
 import io.anuke.mindustry.game.Team;
+import io.anuke.mindustry.io.SaveIO;
 import io.anuke.mindustry.maps.generation.WorldGenerator.GenResult;
 import io.anuke.mindustry.maps.missions.BattleMission;
 import io.anuke.mindustry.maps.missions.WaveMission;
@@ -23,8 +24,8 @@ import io.anuke.ucore.util.Mathf;
 import static io.anuke.mindustry.Vars.*;
 
 public class Sectors{
-    private static final int sectorImageSize = 16;
-    private static final float sectorLargeChance = 0.23f;
+    private static final int sectorImageSize = 32;
+    private static final float sectorLargeChance = 0.24f;
 
     private GridMap<Sector> grid = new GridMap<>();
 
@@ -33,12 +34,19 @@ public class Sectors{
     }
 
     public void playSector(Sector sector){
+        if(sector.hasSave() && SaveIO.breakingVersions.contains(sector.getSave().getBuild())){
+            sector.getSave().delete();
+            ui.showInfo("$text.save.old");
+        }
+
         if(!sector.hasSave()){
             world.loadSector(sector);
             logic.play();
             sector.saveID = control.getSaves().addSave("sector-" + sector.packedPosition()).index;
             world.sectors().save();
             world.setSector(sector);
+        }else if(SaveIO.breakingVersions.contains(sector.getSave().getBuild())){
+            ui.showInfo("$text.save.old");
         }else try{
             sector.getSave().load();
             world.setSector(sector);
@@ -104,6 +112,11 @@ public class Sectors{
     }
 
     public void load(){
+        for(Sector sector : grid.values()){
+            sector.texture.dispose();
+        }
+        grid.clear();
+
         Array<Sector> out = Settings.getJson("sectors", Array.class);
 
         for(Sector sector : out){
@@ -133,7 +146,7 @@ public class Sectors{
     }
 
     private void initSector(Sector sector){
-        double waveChance = 0.2;
+        double waveChance = 0.3;
 
         sector.difficulty = (int)(Mathf.dst(sector.x, sector.y));
 
@@ -159,9 +172,9 @@ public class Sectors{
         }else if(sector.difficulty > 3){ //now with carbide
             sector.startingItems = Array.with(new ItemStack(Items.copper, 700), new ItemStack(Items.lead, 200), new ItemStack(Items.densealloy, 130));
         }else if(sector.difficulty > 1){ //more starter items for faster start
-            sector.startingItems = Array.with(new ItemStack(Items.copper, 500), new ItemStack(Items.lead, 100));
+            sector.startingItems = Array.with(new ItemStack(Items.copper, 400), new ItemStack(Items.lead, 100));
         }else{ //base starting items to prevent grinding much
-            sector.startingItems = Array.with(new ItemStack(Items.copper, 170));
+            sector.startingItems = Array.with(new ItemStack(Items.copper, 130));
         }
     }
 

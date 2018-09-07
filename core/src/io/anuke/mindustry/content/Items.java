@@ -1,9 +1,8 @@
 package io.anuke.mindustry.content;
 
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.utils.Array;
-import io.anuke.mindustry.game.Content;
-import io.anuke.mindustry.type.ContentList;
+import io.anuke.mindustry.game.ContentList;
+import io.anuke.mindustry.type.ContentType;
 import io.anuke.mindustry.type.Item;
 import io.anuke.mindustry.type.ItemType;
 
@@ -22,7 +21,7 @@ public class Items implements ContentList{
         lead = new Item("lead", Color.valueOf("8c7fa9")){{
             type = ItemType.material;
             hardness = 1;
-            cost = 0.6f;
+            cost = 0.9f;
         }};
 
         densealloy = new Item("dense-alloy", Color.valueOf("b2c6d2")){{
@@ -47,7 +46,7 @@ public class Items implements ContentList{
             explosiveness = 0.1f;
             hardness = 4;
             radioactivity = 0.5f;
-            cost = 1.2f;
+            cost = 1.4f;
         }};
 
         stone = new Item("stone", Color.valueOf("777777")){{
@@ -63,7 +62,7 @@ public class Items implements ContentList{
             type = ItemType.material;
             flammability = 0.1f;
             explosiveness = 0.1f;
-            cost = 1.5f;
+            cost = 1.6f;
         }};
 
         phasematter = new Item("phase-matter", Color.valueOf("f4ba6e")){{
@@ -96,7 +95,7 @@ public class Items implements ContentList{
     }
 
     @Override
-    public Array<? extends Content> getAll(){
-        return Item.all();
+    public ContentType type(){
+        return ContentType.item;
     }
 }

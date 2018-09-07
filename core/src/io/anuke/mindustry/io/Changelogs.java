@@ -13,28 +13,29 @@ public class Changelogs{
     public static void getChangelog(Consumer<Array<VersionInfo>> success, Consumer<Throwable> fail){
         Net.http(releasesURL, "GET", result -> {
             Json j = new Json();
-            Array<JsonValue> list = j.fromJson(null, result);
+            Array<JsonValue> list = j.fromJson(Array.class, result);
             Array<VersionInfo> out = new Array<>();
             for(JsonValue value : list){
                 String name = value.getString("name");
                 String description = value.getString("body").replace("\r", "");
                 int id = value.getInt("id");
                 int build = Integer.parseInt(value.getString("tag_name").substring(1));
-                out.add(new VersionInfo(name, description, id, build));
+                out.add(new VersionInfo(name, description, id, build, value.getString("published_at")));
             }
             success.accept(out);
         }, fail);
     }
 
     public static class VersionInfo{
-        public final String name, description;
+        public final String name, description, date;
         public final int id, build;
 
-        public VersionInfo(String name, String description, int id, int build){
+        public VersionInfo(String name, String description, int id, int build, String date){
             this.name = name;
             this.description = description;
             this.id = id;
             this.build = build;
+            this.date = date;
         }
 
         @Override

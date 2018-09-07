@@ -9,7 +9,9 @@ import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.blocks.Floor;
 import io.anuke.ucore.function.IntPositionConsumer;
 import io.anuke.ucore.util.Bits;
+import io.anuke.ucore.util.Mathf;
 
+import static io.anuke.mindustry.Vars.content;
 import static io.anuke.mindustry.Vars.ui;
 
 public enum EditorTool{
@@ -26,7 +28,7 @@ public enum EditorTool{
                 bw = editor.getMap().read(x, y, DataPosition.wall);
             }
 
-            Block block = Block.getByID(bw == 0 ? bf : bw);
+            Block block = content.block(bw == 0 ? bf : bw);
             editor.setDrawBlock(block);
             ui.editor.updateSelectedBlock();
         }
@@ -81,6 +83,8 @@ public enum EditorTool{
         MapTileData data;
 
         public void touched(MapEditor editor, int x, int y){
+            if(!Mathf.inBounds(x, y, editor.getMap().width(), editor.getMap().height())) return;
+
             if(editor.getDrawBlock().isMultiblock()){
                 //don't fill multiblocks, thanks
                 pencil.touched(editor, x, y);

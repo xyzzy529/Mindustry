@@ -8,7 +8,7 @@ import io.anuke.mindustry.entities.TileEntity;
 import io.anuke.mindustry.entities.Units;
 import io.anuke.mindustry.game.Team;
 import io.anuke.mindustry.type.AmmoType;
-import io.anuke.mindustry.type.Upgrade;
+import io.anuke.mindustry.type.ContentType;
 import io.anuke.mindustry.type.Weapon;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.world.blocks.Floor;
@@ -22,6 +22,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import static io.anuke.mindustry.Vars.content;
 import static io.anuke.mindustry.Vars.world;
 
 public abstract class GroundUnit extends BaseUnit{
@@ -81,7 +82,7 @@ public abstract class GroundUnit extends BaseUnit{
         }
 
         public void update(){
-            if(health >= health && !isCommanded()){
+            if(health >= maxHealth() && !isCommanded()){
                 state.set(attack);
             }
 
@@ -211,7 +212,7 @@ public abstract class GroundUnit extends BaseUnit{
     @Override
     public void read(DataInput data, long time) throws IOException{
         super.read(data, time);
-        weapon = Upgrade.getByID(data.readByte());
+        weapon = content.getByID(ContentType.weapon, data.readByte());
     }
 
     @Override
@@ -222,7 +223,7 @@ public abstract class GroundUnit extends BaseUnit{
 
     @Override
     public void readSave(DataInput stream) throws IOException{
-        weapon = Upgrade.getByID(stream.readByte());
+        weapon = content.getByID(ContentType.weapon, stream.readByte());
         super.readSave(stream);
     }
 
@@ -252,6 +253,7 @@ public abstract class GroundUnit extends BaseUnit{
         if(enemy == null) return;
 
         Tile tile = world.tileWorld(x, y);
+        if(tile == null) return;
         Tile targetTile = world.pathfinder().getTargetTile(enemy, tile);
         TileEntity core = getClosestCore();
 

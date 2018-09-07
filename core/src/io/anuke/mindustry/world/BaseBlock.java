@@ -1,10 +1,12 @@
 package io.anuke.mindustry.world;
 
 import com.badlogic.gdx.utils.Array;
+import io.anuke.mindustry.Vars;
 import io.anuke.mindustry.content.fx.EnvironmentFx;
 import io.anuke.mindustry.entities.TileEntity;
 import io.anuke.mindustry.entities.Unit;
 import io.anuke.mindustry.entities.effect.Puddle;
+import io.anuke.mindustry.game.MappableContent;
 import io.anuke.mindustry.type.Item;
 import io.anuke.mindustry.type.Liquid;
 import io.anuke.mindustry.world.consumers.ConsumeItem;
@@ -16,7 +18,7 @@ import io.anuke.ucore.core.Timers;
 import io.anuke.ucore.util.Mathf;
 import io.anuke.ucore.util.Translator;
 
-public abstract class BaseBlock{
+public abstract class BaseBlock extends MappableContent{
     public boolean hasItems;
     public boolean hasLiquids;
     public boolean hasPower;
@@ -48,7 +50,7 @@ public abstract class BaseBlock{
     }
 
     public int getMaximumAccepted(Tile tile, Item item){
-        return itemCapacity - tile.entity.items.total();
+        return itemCapacity - (tile.entity.items.total() - tile.entity.items.get(item));
     }
 
     /**
@@ -101,9 +103,7 @@ public abstract class BaseBlock{
         return true;
     }
 
-    /**
-     * Returns how much power is accepted.
-     */
+    /**Returns how much power is accepted.*/
     public float addPower(Tile tile, float amount){
         float canAccept = Math.min(powerCapacity - tile.entity.power.amount, amount);
 
@@ -236,8 +236,8 @@ public abstract class BaseBlock{
 
             if(todump == null){
 
-                for(int ii = 0; ii < Item.all().size; ii++){
-                    Item item = Item.getByID(ii);
+                for(int ii = 0; ii < Vars.content.items().size; ii++){
+                    Item item = Vars.content.item(ii);
 
                     if(other.getTeamID() == tile.getTeamID() && entity.items.has(item) && other.block().acceptItem(item, other, in) && canDump(tile, other, item)){
                         other.block().handleItem(item, other, in);
@@ -274,7 +274,7 @@ public abstract class BaseBlock{
     /** Try offloading an item to a nearby container in its facing direction. Returns true if success.*/
     public boolean offloadDir(Tile tile, Item item){
         Tile other = tile.getNearby(tile.getRotation());
-        if(other != null && other.target().getTeamID() == tile.getTeamID() &&  other.block().acceptItem(item, other, tile)){
+        if(other != null && other.target().getTeamID() == tile.getTeamID() && other.block().acceptItem(item, other, tile)){
             other.block().handleItem(item, other, tile);
             return true;
         }

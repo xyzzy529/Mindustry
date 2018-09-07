@@ -4,13 +4,13 @@ import com.badlogic.gdx.graphics.Color;
 import io.anuke.mindustry.content.Items;
 import io.anuke.mindustry.content.Liquids;
 import io.anuke.mindustry.content.fx.BlockFx;
-import io.anuke.mindustry.type.ContentList;
+import io.anuke.mindustry.game.ContentList;
 import io.anuke.mindustry.type.ItemStack;
 import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.blocks.production.*;
 
 public class CraftingBlocks extends BlockList implements ContentList{
-    public static Block smelter, arcsmelter, siliconsmelter, plastaniumCompressor, phaseWeaver, alloysmelter, alloyfuser,
+    public static Block smelter, arcsmelter, siliconsmelter, plastaniumCompressor, phaseWeaver, alloySmelter,
             pyratiteMixer, blastMixer,
             cryofluidmixer, melter, separator, centrifuge, biomatterCompressor, pulverizer, solidifier, incinerator;
 
@@ -72,7 +72,6 @@ public class CraftingBlocks extends BlockList implements ContentList{
         }};
 
         phaseWeaver = new PhaseWeaver("phase-weaver"){{
-            health = 90;
             craftEffect = BlockFx.smeltsmoke;
             result = Items.phasematter;
             craftTime = 120f;
@@ -82,36 +81,20 @@ public class CraftingBlocks extends BlockList implements ContentList{
             consumes.power(0.5f);
         }};
 
-        alloysmelter = new PowerSmelter("alloy-smelter"){{
-            health = 90;
+        alloySmelter = new PowerSmelter("alloy-smelter"){{
             craftEffect = BlockFx.smeltsmoke;
             result = Items.surgealloy;
-            craftTime = 50f;
+            craftTime = 75f;
             size = 2;
 
             useFlux = true;
-            fluxNeeded = 4;
+            fluxNeeded = 3;
 
-            consumes.power(0.3f);
-            consumes.items(new ItemStack[]{new ItemStack(Items.titanium, 2), new ItemStack(Items.lead, 4), new ItemStack(Items.silicon, 3), new ItemStack(Items.plastanium, 2)});
-        }};
-
-        alloyfuser = new PowerSmelter("alloy-fuser"){{
-            health = 90;
-            craftEffect = BlockFx.smeltsmoke;
-            result = Items.surgealloy;
-            craftTime = 30f;
-            size = 3;
-
-            useFlux = true;
-            fluxNeeded = 4;
-
-            consumes.items(new ItemStack[]{new ItemStack(Items.titanium, 3), new ItemStack(Items.lead, 4), new ItemStack(Items.silicon, 3), new ItemStack(Items.plastanium, 2)});
             consumes.power(0.4f);
+            consumes.items(new ItemStack[]{new ItemStack(Items.titanium, 2), new ItemStack(Items.lead, 4), new ItemStack(Items.silicon, 3), new ItemStack(Items.copper, 3)});
         }};
 
         cryofluidmixer = new LiquidMixer("cryofluidmixer"){{
-            health = 200;
             outputLiquid = Liquids.cryofluid;
             liquidPerItem = 50f;
             itemCapacity = 50;
@@ -211,7 +194,7 @@ public class CraftingBlocks extends BlockList implements ContentList{
             itemCapacity = 50;
             craftTime = 25f;
             outputLiquid = Liquids.oil;
-            outputLiquidAmount = 1.2f;
+            outputLiquidAmount = 1.5f;
             size = 2;
             health = 320;
             hasLiquids = true;

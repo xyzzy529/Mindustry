@@ -8,7 +8,6 @@ import io.anuke.mindustry.game.EventType.GameOverEvent;
 import io.anuke.mindustry.game.EventType.PlayEvent;
 import io.anuke.mindustry.game.EventType.ResetEvent;
 import io.anuke.mindustry.game.EventType.WaveEvent;
-import io.anuke.mindustry.game.Team;
 import io.anuke.mindustry.game.Teams;
 import io.anuke.mindustry.net.Net;
 import io.anuke.mindustry.type.Item;
@@ -51,7 +50,7 @@ public class Logic extends Module{
 
         for(Tile tile : state.teams.get(defaultTeam).cores){
             if(debug){
-                for(Item item : Item.all()){
+                for(Item item : content.items()){
                     if(item.type == ItemType.material){
                         tile.entity.items.set(item, 1000);
                     }
@@ -66,7 +65,7 @@ public class Logic extends Module{
             }
         }
 
-        Events.fire(PlayEvent.class);
+        Events.fire(new PlayEvent());
     }
 
     public void reset(){
@@ -79,7 +78,7 @@ public class Logic extends Module{
         Entities.clear();
         TileEntity.sleepingEntities = 0;
 
-        Events.fire(ResetEvent.class);
+        Events.fire(new ResetEvent());
     }
 
     public void runWave(){
@@ -87,23 +86,14 @@ public class Logic extends Module{
         state.wave++;
         state.wavetime = wavespace * state.difficulty.timeScaling;
 
-        Events.fire(WaveEvent.class);
+        Events.fire(new WaveEvent());
     }
 
-    //for gameOver to trigger, there must not be no cores remaining at all; obviously this never triggers in PvP
+    //this never triggers in PvP; only for checking sector game-overs
     private void checkGameOver(){
-        boolean gameOver = true;
-
-        for(Team team : Team.all){
-            if(state.teams.get(team).cores.size > 0){
-                gameOver = false;
-                break;
-            }
-        }
-
-        if(gameOver && !state.gameOver){
+        if(!state.mode.isPvp && state.teams.get(defaultTeam).cores.size == 0 && !state.gameOver){
             state.gameOver = true;
-            Events.fire(GameOverEvent.class);
+            Events.fire(new GameOverEvent());
         }
     }
 
@@ -123,7 +113,7 @@ public class Logic extends Module{
                 Timers.update();
             }
 
-            if(!world.isInvalidMap()){
+            if(!Net.client() && !world.isInvalidMap()){
                 checkGameOver();
             }
 
@@ -140,12 +130,13 @@ public class Logic extends Module{
                 if(!Entities.defaultGroup().isEmpty())
                     throw new RuntimeException("Do not add anything to the default group!");
 
-                Entities.update(bulletGroup);
+
                 for(EntityGroup group : unitGroups){
                     Entities.update(group);
                 }
                 Entities.update(puddleGroup);
                 Entities.update(tileGroup);
+                Entities.update(bulletGroup);
                 Entities.update(fireGroup);
                 Entities.update(playerGroup);
                 Entities.update(itemGroup);
@@ -166,6 +157,10 @@ public class Logic extends Module{
 
                 world.pathfinder().update();
             }
+        }
+
+        if(threads.isEnabled()){
+            netServer.update();
         }
     }
 }

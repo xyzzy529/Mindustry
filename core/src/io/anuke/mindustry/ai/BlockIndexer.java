@@ -50,18 +50,18 @@ public class BlockIndexer{
     private Array<Tile> returnArray = new ThreadArray<>();
 
     public BlockIndexer(){
-        Events.on(TileChangeEvent.class, tile -> {
-            if(typeMap.get(tile.packedPosition()) != null){
-                TileIndex index = typeMap.get(tile.packedPosition());
+        Events.on(TileChangeEvent.class, event -> {
+            if(typeMap.get(event.tile.packedPosition()) != null){
+                TileIndex index = typeMap.get(event.tile.packedPosition());
                 for(BlockFlag flag : index.flags){
-                    getFlagged(index.team)[flag.ordinal()].remove(tile);
+                    getFlagged(index.team)[flag.ordinal()].remove(event.tile);
                 }
             }
-            process(tile);
-            updateQuadrant(tile);
+            process(event.tile);
+            updateQuadrant(event.tile);
         });
 
-        Events.on(WorldLoadEvent.class, () -> {
+        Events.on(WorldLoadEvent.class, event -> {
             flagMap = new ObjectSet[Team.all.length][BlockFlag.all.length];
             for(int i = 0; i < flagMap.length; i++){
                 for(int j = 0; j < BlockFlag.all.length; j++){
@@ -128,7 +128,7 @@ public class BlockIndexer{
                     for(int ty = ry * structQuadrantSize; ty < (ry + 1) * structQuadrantSize && ty < world.height(); ty++){
                         Tile other = world.tile(tx, ty);
 
-                        if(other == null || other.entity == null || other.getTeam() != team || !pred.test(other)) continue;
+                        if(other == null || other.entity == null || other.getTeam() != team || !pred.test(other) || !other.block().targetable) continue;
 
                         TileEntity e = other.entity;
 
@@ -233,7 +233,7 @@ public class BlockIndexer{
             TeamData data = state.teams.get(team);
 
             //fast-set this quadrant to 'occupied' if the tile just placed is already of this team
-            if(tile.getTeam() == data.team && tile.entity != null){
+            if(tile.getTeam() == data.team && tile.entity != null && tile.block().targetable){
                 structQuadrants[data.team.ordinal()].set(index);
                 continue; //no need to process futher
             }

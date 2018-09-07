@@ -51,7 +51,6 @@ public class Control extends Module{
     private Throwable error;
 
     public Control(){
-
         saves = new Saves();
         db = new ContentDatabase();
 
@@ -61,10 +60,10 @@ public class Control extends Module{
 
         Effects.setShakeFalloff(10000f);
 
-        ContentLoader.initialize(Content::init);
+        content.initialize(Content::init);
         Core.atlas = new Atlas("sprites.atlas");
         Core.atlas.setErrorRegion("error");
-        ContentLoader.initialize(Content::load);
+        content.initialize(Content::load);
 
         db.load();
 
@@ -83,7 +82,6 @@ public class Control extends Module{
 
         Settings.defaultList(
             "ip", "localhost",
-            "port", port + "",
             "color-0", Color.rgba8888(playerColors[8]),
             "color-1", Color.rgba8888(playerColors[11]),
             "color-2", Color.rgba8888(playerColors[13]),
@@ -98,13 +96,13 @@ public class Control extends Module{
 
         saves.load();
 
-        Events.on(StateChangeEvent.class, (from, to) -> {
-            if((from == State.playing && to == State.menu) || (from == State.menu && to != State.menu)){
+        Events.on(StateChangeEvent.class, event -> {
+            if((event.from == State.playing && event.to == State.menu) || (event.from == State.menu && event.to != State.menu)){
                 Timers.runTask(5f, Platform.instance::updateRPC);
             }
         });
 
-        Events.on(PlayEvent.class, () -> {
+        Events.on(PlayEvent.class, event -> {
             for(Player player : players){
                 player.add();
             }
@@ -118,13 +116,13 @@ public class Control extends Module{
             }
         });
 
-        Events.on(WorldLoadGraphicsEvent.class, () -> {
+        Events.on(WorldLoadGraphicsEvent.class, event -> {
             if(mobile){
                 Core.camera.position.set(players[0].x, players[0].y, 0);
             }
         });
 
-        Events.on(ResetEvent.class, () -> {
+        Events.on(ResetEvent.class, event -> {
             for(Player player : players){
                 player.reset();
             }
@@ -134,7 +132,7 @@ public class Control extends Module{
             saves.resetSave();
         });
 
-        Events.on(WaveEvent.class, () -> {
+        Events.on(WaveEvent.class, event -> {
 
             int last = Settings.getInt("hiscore" + world.getMap().name, 0);
 
@@ -147,7 +145,7 @@ public class Control extends Module{
             Platform.instance.updateRPC();
         });
 
-        Events.on(GameOverEvent.class, () -> {
+        Events.on(GameOverEvent.class, event -> {
             //delete saves for game-over sectors
             if(world.getSector() != null && world.getSector().hasSave()){
                 world.getSector().getSave().delete();
@@ -160,7 +158,7 @@ public class Control extends Module{
             });
         });
 
-        Events.on(WorldLoadEvent.class, () -> threads.runGraphics(() -> Events.fire(WorldLoadGraphicsEvent.class)));
+        Events.on(WorldLoadEvent.class, event -> threads.runGraphics(() -> Events.fire(new WorldLoadGraphicsEvent())));
     }
 
     public void addPlayer(int index){
@@ -272,9 +270,9 @@ public class Control extends Module{
             control.database().unlockContent(players[0].inventory.getItem().item);
         }
 
-        for(int i = 0; i < Recipe.all().size; i++){
-            Recipe recipe = Recipe.all().get(i);
-            if(!recipe.debugOnly && entity.items.has(recipe.requirements, 1.4f)){
+        for(int i = 0; i < content.recipes().size; i ++){
+            Recipe recipe = content.recipes().get(i);
+            if(!recipe.debugOnly && recipe.requirements != null && entity.items.has(recipe.requirements, 1.4f)){
                 if(control.database().unlockContent(recipe)){
                     ui.hudfrag.showUnlock(recipe);
                 }
@@ -285,7 +283,7 @@ public class Control extends Module{
     @Override
     public void dispose(){
         Platform.instance.onGameExit();
-        ContentLoader.dispose();
+        content.dispose();
         Net.dispose();
         ui.editor.dispose();
         inputs = new InputHandler[]{};
@@ -352,7 +350,7 @@ public class Control extends Module{
             throw new RuntimeException(error);
         }
 
-        if(debug && Inputs.keyTap("console")){
+        if(debug && Inputs.keyTap(io.anuke.ucore.input.Input.GRAVE)){
             console = !console;
         }
 
@@ -367,6 +365,11 @@ public class Control extends Module{
         if(!state.is(State.menu)){
             for(InputHandler input : inputs){
                 input.update();
+            }
+
+            //auto-update rpc every 5 seconds
+            if(Timers.get("rpcUpdate", 60 * 5)){
+                Platform.instance.updateRPC();
             }
 
             //check unlocked sectors

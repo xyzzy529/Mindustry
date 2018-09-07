@@ -1,114 +1,49 @@
 package io.anuke.mindustry.maps.generation;
 
-import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
-import io.anuke.mindustry.content.blocks.Blocks;
-import io.anuke.mindustry.content.blocks.DefenseBlocks;
-import io.anuke.mindustry.content.blocks.UnitBlocks;
+import com.badlogic.gdx.utils.IntIntMap;
+import com.badlogic.gdx.utils.Predicate;
+import io.anuke.mindustry.content.Items;
+import io.anuke.mindustry.content.Liquids;
+import io.anuke.mindustry.content.blocks.*;
 import io.anuke.mindustry.game.Team;
-import io.anuke.mindustry.maps.generation.StructureFormat.StructBlock;
 import io.anuke.mindustry.type.AmmoType;
 import io.anuke.mindustry.type.Item;
+import io.anuke.mindustry.type.Recipe;
 import io.anuke.mindustry.world.Block;
+import io.anuke.mindustry.world.Edges;
 import io.anuke.mindustry.world.Tile;
+import io.anuke.mindustry.world.blocks.defense.Door;
+import io.anuke.mindustry.world.blocks.defense.MendProjector;
+import io.anuke.mindustry.world.blocks.defense.Wall;
 import io.anuke.mindustry.world.blocks.defense.turrets.ItemTurret;
 import io.anuke.mindustry.world.blocks.defense.turrets.PowerTurret;
+import io.anuke.mindustry.world.blocks.defense.turrets.Turret;
+import io.anuke.mindustry.world.blocks.power.NuclearReactor;
+import io.anuke.mindustry.world.blocks.power.PowerGenerator;
+import io.anuke.mindustry.world.blocks.production.Drill;
+import io.anuke.mindustry.world.blocks.production.Pump;
+import io.anuke.mindustry.world.blocks.storage.CoreBlock;
+import io.anuke.mindustry.world.blocks.storage.StorageBlock;
+import io.anuke.mindustry.world.blocks.units.UnitPad;
+import io.anuke.mindustry.world.consumers.ConsumePower;
+import io.anuke.ucore.function.BiFunction;
+import io.anuke.ucore.function.IntPositionConsumer;
+import io.anuke.ucore.function.TriFunction;
+import io.anuke.ucore.util.Geometry;
 import io.anuke.ucore.util.Mathf;
-
-import static io.anuke.mindustry.Vars.world;
+import static io.anuke.mindustry.Vars.content;
 
 public class FortressGenerator{
-    private final static int minCoreDst = 60;
-
-    private static Structure[] structures;
-    private static Structure[] bases;
+    private final static int coreDst = 120;
 
     private int enemyX, enemyY, coreX, coreY;
     private Team team;
     private Generation gen;
 
-    private static void init(){
-        if(structures != null) return;
-
-        structures = new Structure[]{
-        /*
-            //tiny duo outpost
-            new Structure(0.03f, Items.tungsten, "BAMADnR1bmdzdGVuLWRyaWxsAgADZHVvAQANdHVuZ3N0ZW4td2FsbAAAA2FpcgMFAQABAwEDAQMBAAEAAgMDAwIDAQABAAEBAQEBAQEA"),
-
-            //basic outposts with duos
-            new Structure(0.03f, Items.tungsten, "BAIAA2R1bwMADWNhcmJpZGUtZHJpbGwBAA10dW5nc3Rlbi13YWxsAAADYWlyBQUAAAEAAQABAAAAAQABAAIAAQABAAEAAgADAwIAAQABAAEAAgABAAEAAAABAAEAAQAAAA=="),
-
-            //more advanced duo outpost
-            new Structure(0.04f, Items.lead, "BwYADnR1bmdzdGVuLWRyaWxsAwADZHVvBAAIc3BsaXR0ZXIBAA10dW5nc3Rlbi13YWxsAgATdHVuZ3N0ZW4td2FsbC1sYXJnZQAAA2FpcgUACGNvbnZleW9yCQkAAAAAAQEBAQEBAQEBAgAAAAAAAAICAAEDAAQDAwACAgAAAAABAgACAAABAgUCAQEAAAAAAQABAgMAAQIBAgUCAQEBAQMAAQABAgQCBQMFAwYCBQEFAQQDAQABAgMAAQEBAQUAAQMBAwMAAQABAwICAAMBAQUAAQMCAgADAQMAAAAAAAIDAAQDAwAAAwADAAAAAAAAAQIBAwEDAQMBAwAAAAA="),
-
-            //tungsten duo and drone outpost
-            new Structure(0.02f, Items.tungsten, "BgEADXR1bmdzdGVuLXdhbGwEAA1jYXJiaWRlLWRyaWxsAwADZHVvAgATdHVuZ3N0ZW4td2FsbC1sYXJnZQAAA2FpcgUACWRyb25lLXBhZAUHAAAAAAEDAQMCAgAAAAAAAAAAAQADAAADAAMBAgAAAAABAAQBBQAAAAECAAAAAAEAAwAAAAAAAQIAAAAAAQABAQEBAQEBAg=="),
-
-            //resupply point
-            new Structure(0.03f, Items.lead, "BgEADXR1bmdzdGVuLXdhbGwCAAtzb2xhci1wYW5lbAUAA2R1bwMADnJlc3VwcGx5LXBvaW50AAADYWlyBAANY2FyYmlkZS1kcmlsbAUFAQABAAEAAAAAAAEAAgMBAQEBAQABAAMDBAEFAQEAAQACAwEBAQEBAAEBAQEBAQAAAAA="),
-
-            //mini dagger outpost
-            new Structure(0.02f, Items.lead, "CwIADXR1bmdzdGVuLXdhbGwGAAhjb252ZXlvcgUAA2R1bwgACmRhZ2dlci1wYWQBABN0dW5nc3Rlbi13YWxsLWxhcmdlBwAIc3BsaXR0ZXIDAA5yZXN1cHBseS1wb2ludAoADHJlcGFpci1wb2ludAkADnR1bmdzdGVuLWRyaWxsAAADYWlyBAALc29sYXItcGFuZWwHCQAAAAABAAABAgECAQIBAAAAAAEAAAMAAwADAwEEAAIBAgICAgAAAAAFAwYDBwMCAQIBBQECAgAAAAAIAAAACQMGAQYBBwMCAgAAAAAAAAAAAQMAAAIDBQECAgEAAAAKAQQBAAAAAAIBAgECAgAAAAACAQIBAgEAAAAAAAAAAA=="),
-
-            //salvo outpost
-            new Structure(0.02f, Items.tungsten, "BAIABXNhbHZvAwANY2FyYmlkZS1kcmlsbAAAA2FpcgEADGNhcmJpZGUtd2FsbAcHAAAAAAEDAQMBAwEDAAABAwEDAQMCAAAAAQMAAAEAAgAAAAAAAAABAwEDAQAAAAAAAwACAAAAAQIBAAEBAgAAAAAAAAABAgAAAQEAAAAAAQEBAQEBAAABAQEBAQEBAQAAAAA="),
-
-            //advanced laser outpost
-            new Structure(0.03f, null, "BQIABmxhbmNlcgEAEmNhcmJpZGUtd2FsbC1sYXJnZQQAEXNvbGFyLXBhbmVsLWxhcmdlAAADYWlyAwALc29sYXItcGFuZWwLCwAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAEAAAAAAAAAAAABAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAMAAwAAAAAAAwABAAAAAAABAAAAAgAAAAAAAAAAAAMAAAAAAAAAAAAAAAAAAAAAAAQAAAACAAAAAQAAAAAAAQAAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAADAAIAAAADAAMAAQAAAAAAAAAAAAEAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
-
-            //2x interceptor outpost
-            new Structure(0.02f, Items.lead, "CgMAEXNvbGFyLXBhbmVsLWxhcmdlBgADZHVvAgAPaW50ZXJjZXB0b3ItcGFkBAASY2FyYmlkZS13YWxsLWxhcmdlBwAOcmVzdXBwbHktcG9pbnQAAANhaXIFAAtzb2xhci1wYW5lbAEADGNhcmJpZGUtd2FsbAkAC2Rpc3RyaWJ1dG9yCAALbGFzZXItZHJpbGwKCAEAAQMBAwEDAQMBAwECAAABAAIDAAAAAAAAAAABAgAAAQAAAAAAAAADAQAAAQIBAgQDAAAFAAAAAAAAAAYCAQMAAAAABwAIAAAACQAAAAECBAMAAAEAAAAAAAABAAABAgAAAAAFAAAAAAAAAAYCAQIBAAIDAAAAAAMBAAABAgECAQAAAAAAAAAAAAAAAQIAAAEAAQEBAQEBAQEBAQEBAAA="),
-
-            //resupply point (again)
-            new Structure(0.02f, Items.lead, "BgEADXR1bmdzdGVuLXdhbGwCAAtzb2xhci1wYW5lbAUAA2R1bwMADnJlc3VwcGx5LXBvaW50AAADYWlyBAANY2FyYmlkZS1kcmlsbAUFAQABAAEAAAAAAAEAAgMBAQEBAQABAAMDBAEFAQEAAQACAwEBAQEBAAEBAQEBAQAAAAA="),
-
-            //coal laser outpost
-            new Structure(0.03f, null, "BgEADHRob3JpdW0td2FsbAMABmxhbmNlcgUAFGNvbWJ1c3Rpb24tZ2VuZXJhdG9yBAANY2FyYmlkZS1kcmlsbAAAA2FpcgIAC3NvbGFyLXBhbmVsBwcAAAEAAQABAQEBAQEBAAAAAQACAgMAAAACAAEAAAABAAICAAAAAAIAAQAAAAEAAQAEAQUAAQABAAAAAQACAAMBAAMCAAEAAAABAAIAAAMAAwIAAQAAAAEAAQABAwEDAQABAA=="),
-
-            //ultimate laser outpost
-            new Structure(0.02f, null, "BgMABmxhbmNlcgIAEmNhcmJpZGUtd2FsbC1sYXJnZQUAEXNvbGFyLXBhbmVsLWxhcmdlAAADYWlyBAALc29sYXItcGFuZWwBAAxjYXJiaWRlLXdhbGwPDwAAAAAAAAAAAAABAwIDAAABAwAAAAAAAAAAAAAAAAAAAAACAwAAAgMAAAAAAAACAwAAAgMAAAAAAAAAAAAAAQMAAAAAAAAAAAMDAAAAAAAAAAAAAAIDAAAAAAAAAgMAAAMDAAAEAwAAAAADAwAAAwMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIDAAAAAAAAAgMAAAMDAAAAAAUDAAAAAAAAAAAEAwAAAAABAwEDAAAAAAAAAAAAAAAAAAAAAAUDAAADAwAAAgMAAAIDAAADAwAAAAAAAAAABAMAAAAAAAAAAwAAAAAAAAAAAAAAAAAAAAAFAwAAAAAAAAAAAwMAAAIDAAABAwEDAgMAAAQDAAAAAAAAAAAFAwAAAAAAAAAAAAAAAAAAAAAAAAMDAAADAwAAAAAAAAAAAwMAAAIDAAAAAAAAAgMAAAAAAAAAAAAAAwMAAAQDAAAAAAAAAAAAAAAAAAAAAAIDAAACAwAAAAAAAAIDAAACAwAAAQMAAAAAAAABAwAAAAAAAAAAAgMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEDAAAAAAEDAAAAAAAAAAAAAA=="),
-
-            //fabricator outpost
-            new Structure(0.02f, Items.tungsten, "BgUADWNhcmJpZGUtZHJpbGwBABJ0aG9yaXVtLXdhbGwtbGFyZ2UCAAx0aG9yaXVtLXdhbGwEAANkdW8AAANhaXIDAA5mYWJyaWNhdG9yLXBhZAkJAAAAAAEDAAACAwEDAAAAAAAAAAACAwADAAMCAwADAAMCAgAAAQMAAAMCAAACAAMCAAABAwAAAAAAAAAAAAAEAgAAAAAAAgAAAgMCAAIBBAIFAAQCAgMCAgIDAQMAAAMCAAAEAgMCAAABAwAAAAAAAAAAAAACAQAAAAAAAgAAAAACAAEDAAECAQEDAAECAQAAAAAAAAAAAAACAwACAAAAAAAA"),
-            */
-        };
-
-        bases = new Structure[]{
-        /*
-            //primitive 4-spawner base
-            new Structure("CAQADXR1bmdzdGVuLXdhbGwFAANkdW8HAARjb3JlAQAKZGFnZ2VyLXBhZAYACHVubG9hZGVyAgAMcmVwYWlyLXBvaW50AAADYWlyAwALc29sYXItcGFuZWwJBwAAAQMAAAIDAQMAAAAAAAAAAAAAAwIAAAAAAAAEAAQBBAEEAQQBBAEEAgQABQIAAAAAAAAFAgQCBAAGAwAABwAAAAYDBAAEAAUCAAAAAAAABQIEAAQABAMEAwQDBAMEAAQAAAABAwAAAwIBAwAAAAAAAAAAAAACAwAAAAAAAA=="),
-
-            //more advanced base, 8 spawners
-            new Structure("CQIADXR1bmdzdGVuLXdhbGwGAANkdW8IAARjb3JlAQAKZGFnZ2VyLXBhZAcACHVubG9hZGVyBAATdHVuZ3N0ZW4td2FsbC1sYXJnZQUADHJlcGFpci1wb2ludAAAA2FpcgMAC3NvbGFyLXBhbmVsCwsAAAAAAQEAAAAAAAAAAAEBAAAAAAAAAAAAAAAAAAACAwMAAgMAAAAAAAAAAAEBAAAEAAAAAgMFAAIDBAAAAAEBAAAAAAAAAAAAAAYABwIGAAAAAAAAAAAAAAACAAIABgAAAAAAAAAGAAICAgAAAAAAAwAFAAcCAAAIAAAABwIFAAMAAAAAAAIAAgAGAAAAAAAAAAYAAgICAAAAAQEAAAQAAAAGAAcCBgAEAAAAAQEAAAAAAAAAAAAAAgEFAAIBAAAAAAAAAAAAAAAAAQEAAAIDAwACAwEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="),
-
-            //rather advanced flyer base, no ground units, drones
-            new Structure("DQIADXR1bmdzdGVuLXdhbGwHAAhjb252ZXlvcgMAA2R1bwwABGNvcmULAAh1bmxvYWRlcgEAE3R1bmdzdGVuLXdhbGwtbGFyZ2UGAA9pbnRlcmNlcHRvci1wYWQFAAhzcGxpdHRlcgoADHJlcGFpci1wb2ludAQABXNhbHZvAAADYWlyCAAJZHJvbmUtcGFkCQALc29sYXItcGFuZWwREQAAAAAAAAAAAAAAAAEAAAACAgEAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAgAAAAAAAwAAAAAAAgABAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAADAAUAAwAEAAAAAAAAAAAAAAAAAAAAAQAAAAYAAAAAAAAAAgMHAgIDAAAAAAYAAAABAAAAAAAAAAAAAAAAAAAAAgMHAgcDBQEHAQcCAgMAAAAAAAAAAAAAAAACAAQAAAACAwgAAAAJAAcCCQAIAAAAAgMEAAAAAgAAAAEAAAAAAAAABwMAAAAACgMLAgoDAAAAAAcBAAAAAAEAAAAAAAAAAwACAwcCCQAKAwAAAAAAAAoDCQAHAgIDAwAAAAAAAgADAAUABwMFAAcDCwIAAAwAAAALAwcBBQIHAQUAAwACAAEAAAADAAIDBwAJAAoDAAAAAAAACgMJAAcAAgMDAAEAAAAAAAAABAAAAAcDCAAAAAoDCwMKAwgAAAAHAQQAAAAAAAAAAAACAAAAAAACAwAAAAAJAAcACQAAAAAAAgMAAAAAAgAAAAAAAQAAAAYAAAACAwcABwMFAgcBBwACAwYAAAABAAAAAAAAAAAAAAAAAAAABAAAAAIDBwACAwQAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAADAAUDAwAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAACAAEAAAADAAEAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAA"),
-
-            //advanced carbide base with fabricators, drones
-            new Structure("Ew4ADXR1bmdzdGVuLXdhbGwHABFzb2xhci1wYW5lbC1sYXJnZRAACGNvbnZleW9yDAADZHVvEgAEY29yZQMACmRhZ2dlci1wYWQRAAh1bmxvYWRlcgkAD2ludGVyY2VwdG9yLXBhZA8ACHNwbGl0dGVyBgAGbGFuY2VyDQARdGl0YW5pdW0tY29udmV5b3IBABJjYXJiaWRlLXdhbGwtbGFyZ2ULAAxyZXBhaXItcG9pbnQIAAVzYWx2bwAAA2FpcgUACXRpdGFuLXBhZAoAC3NvbGFyLXBhbmVsAgAMY2FyYmlkZS13YWxsBAAOZmFicmljYXRvci1wYWQTFQAAAAAAAAAAAAAAAAAAAQMAAwAAAAAAAAEDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAAAAAAIBAAEAAQAAAAAAAAABAAECAQAAAAACAgAAAAAAAAAAAAAAAAICAwAAAAICBAAAAAAABQAAAAQAAAACAAMAAAACAgAAAAAAAAAAAAAAAAICAAAAAAICAAAAAAAAAAAAAAAAAAACAAAAAAACAgAAAAAAAAAAAAAAAAEAAAABAAAABgAAAAAAAAAAAAYAAAABAAAAAQAAAAAAAAAAAAIAAQIAAAAAAAAAAAAAAAMAAwAABwAAAAAAAAAAAAAAAAAAAAECAAACAAIAAAAAAAEAAAAIAAAACQAAAAAAAAAAAAkAAAAIAAAAAQAAAAAAAAACAAIACAMAAAAAAAAAAAAAAAAAAAoACwAKAAAAAAAAAAAAAAAAAAgDAAACAAIAAAAAAAIADAMMAw0CDgAMAAAAAAAAAAwADgANAgwBDAECAAAAAAACAAIAAgMPAw0DDwAPAw8AEAMRAgAAEgAAABECEAEPAA8DDwANAQ8DAgMCAAIACAMAAAIADAMMAw0ADgAMAAAAAAAAAAwADgANAAwBDAECAAgDAAACAAIAAAAAAAEAAAAIAAAACQAAAAoACwAKAAkAAAAIAAAAAQAAAAAAAAACAAIAAQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAECAAACAAIAAAIAAAEAAAABAAAABgAAAAAABwAAAAYAAAABAAAAAQAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAwAAAAICBAAAAAAAAAAAAAQAAAACAAMAAAACAAAAAAAAAAAAAAAAAAIAAAAAAAICAAAAAAAABQAAAAAAAAACAAAAAAACAAAAAAAAAAAAAAAAAAIAAAAAAAICAQMAAwAAAAAAAAEDAAMCAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwAAAAAAAAADAAAAAAAAAAAAAAAAAAAAAA=="),
-
-            //lots of titans and daggers
-            new Structure("DAcACHNwbGl0dGVyBgADZHVvCwAEY29yZQMACmRhZ2dlci1wYWQKAAh1bmxvYWRlcggAEXRpdGFuaXVtLWNvbnZleW9yAgASY2FyYmlkZS13YWxsLWxhcmdlBQAFc2Fsdm8AAANhaXIEAAl0aXRhbi1wYWQBAAxjYXJiaWRlLXdhbGwJAAtkaXN0cmlidXRvchMTAAAAAAECAAAAAAAAAAAAAAECAAABAgAAAAAAAAAAAAABAgAAAAAAAAIDAAAAAAAAAAAAAAAAAQIBAAECAAAAAAAAAAAAAAIDAAAAAAECAAAAAAAAAAAAAAMAAAABAgEAAQIDAAAAAAAAAAAAAAAAAAECAAAAAAAAAAAAAAAAAAMAAAECAQABAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAFAwAABgAHAAYABQMAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAgCAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAAAAFAwAACQAAAAYDCAIGAwkAAAAFAwAAAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAABCgMKAAoDAAAAAAAAAAAAAAAAAAAAAAECAQMBAwEDBgABAAYDCgMAAAAAAAAKAwYDAQAGAAEBAQEBAQECAAABAwEDAQMHAAgDCAMKAAAACwAAAAoACAEIAQcAAQEBAQEBAAABAgEDAQMBAwYAAQAGAwoDAAAAAAAACgMGAwEABgABAQEBAQEBAgAAAAADAAAABQMAAAkAAAAKAwoACgMJAAAABQMAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYDCAAGAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFAwAAAQMIAAEDBQMAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAGAAcABgAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwAAAAECAQABAAMAAAAAAAAAAAAAAAAAAAABAgIDAAAAAAAAAAAAAAAAAQIBAAEAAAAAAAADAAMAAwIDAAABAgAAAAAAAAAAAAAAAAAAAAABAgEAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAECAAAAAAAAAAAAAAECAAABAgAAAAAAAAAAAAABAgAAAAA="),
-
-            //superfortress
-            new Structure("EwwAEXNvbGFyLXBhbmVsLWxhcmdlDgADZHVvEgAEY29yZQMACmRhZ2dlci1wYWQQAAttb25zb29uLXBhZBEACHVubG9hZGVyCgAPaW50ZXJjZXB0b3ItcGFkCQAGbGFuY2VyDwARdGl0YW5pdW0tY29udmV5b3ICABJjYXJiaWRlLXdhbGwtbGFyZ2UGAA5yZXN1cHBseS1wb2ludAQADHJlcGFpci1wb2ludAsABXNhbHZvAAADYWlyCAAJZHJvbmUtcGFkBwAJdGl0YW4tcGFkBQALc29sYXItcGFuZWwBAAxjYXJiaWRlLXdhbGwNAAtkaXN0cmlidXRvch8fAAAAAAAAAAAAAAAAAAABAwAAAAAAAAAAAAACAgAAAQICAgAAAAAAAAAAAAAAAAECAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEDAAAAAAAAAAAAAAAAAAABAgAAAAAAAAAAAAAAAAAAAQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAAAAAAAAAAADAgAABAEFAQYBBQEEAQMCAAAAAAAAAAACAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAECAAAAAAAABwIAAAAAAAAIAgAABQEIAgAAAAAAAAAABwIAAAAAAAABAgAAAAAAAAAAAAAAAAAAAAAAAAICAAAJAgAAAAAAAAAACgMAAAAAAAABAAAAAAAKAwAAAAAAAAAACQIAAAICAAAAAAAAAAAAAAAAAAAAAAECAAAAAAAAAAAAAAAAAAAAAAAACwAAAAEACwAAAAAAAAAAAAAAAAAAAAAAAAAAAAECAAAAAAAAAAAAAAICAAAJAgAACQIAAAAADAAAAAsAAAAAAAAAAQAAAAAACwAAAAAADAAAAAkCAAAJAgAAAgIAAAAAAAABAwEDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA0AAAAOAg0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAALAAAAAAAAAA4CAAAAAAsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwIAAAAADAAAAAAADAAAAAAAAAABAQ8CDwIPAgEAAAAAAAAADAAAAAAADAAAAAAABwIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBDwIPAg8CAQABAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADAgAACgMAAAsAAAALAAAAAQIAAAAAAAAPAg8CDwIAAAAAAAABAQsAAAALAAAACgMAAAMCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAgAAEAIAAA8CDwIPAgAAEAIAAAEAAAIAAAAAAAAAAAAAAAAAAAAAAAACAgAABAEIAgAACwEAAA0AAAABAQEBAAAAAAAAEQARABEAAAAAAAAAAQABAA0AAAALAQAACAIAAAQBAgIAAAAAAAAFAQAAAAAAAAAAAAAAAA8DDwMPAw8DEQMAAAAAAAARAw8BDwEPAQ8BAAAAAAAAAAAAAAAABQEAAAAAAQMBAwYBBQEBAQEBAQEOAg4CDwMPAw8DDwMRAAAAEgAAABEADwEPAQ8BDwEOAQ4BAQEBAQEBBQEGAQEBAQECAgAABQEIAgAACwEAAA0AAAAPAw8DDwMPAxEDAAAAAAAAEQMPAQ8BDwEPAQ0AAAALAQAACAIAAAUBAgIAAAAAAAAEAQAAAAAAAAAAAAAAAAECAQIAAAAAAAARAxEAEQMAAAAAAAABAwEDAAAAAAAAAAAAAAAABAEAAAAAAAAAAAMCAAAKAwAACwAAAAsAAAABAgAAEAIAAA8ADwAPAAAAEAIAAAEACwAAAAsAAAAKAwAAAwIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAECAAAAAAAADwAPAA8AAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEPAA8ADwABAwEDAQMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwIAAAAADAAAAAAADAAAAAsAAAABAQ8ADwAPAAEDCwAAAAAADAAAAAAADAIAAAAABwIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA0AAAAOAA0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEDAQMCAgAACQIAAAkCAAAAAAAAAAALAAAAAAAAAA4AAAAAAAsAAAAAAAAAAAAJAgAACQIAAAICAAABAQEBAAAAAAAAAAAAAAAAAAAAAAAADAAAAAAAAAALAQAAAQILAQAAAAAAAAAADAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAgICAAAJAgAAAAAAAAAACgMAAAAAAAABAgAAAAAKAwAAAAAAAAAACQIAAAICAAABAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAIAAAECCAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAECAgIAAAAABwIAAAMCAAAAAAAABQEAAAAAAwIAAAAABwIAAAICAAABAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQBBQEGAQUBBAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAgIAAAEAAgIAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAA="),
-
-            //welcome to drone hell
-            new Structure("CwcAEXNvbGFyLXBhbmVsLWxhcmdlCQAMdGhvcml1bS13YWxsCgAEY29yZQUACmRhZ2dlci1wYWQDAAZsYW5jZXIBABJjYXJiaWRlLXdhbGwtbGFyZ2UGAAxyZXBhaXItcG9pbnQAAANhaXIIAAlkcm9uZS1wYWQEAAtzb2xhci1wYW5lbAIADGNhcmJpZGUtd2FsbBERAQMAAAEAAAACAwIDAAAAAAICAAAAAAIBAgEBAwAAAQMAAAAAAAAAAAAAAwAAAAAAAAACAgADAAMDAAAAAAAAAAAAAAABAAAABAEEAwAAAAAFAwAABgEFAwAAAAAAAAQBBAEBAwAAAAAAAAQDAAAAAAAAAAAAAAQCAAAAAAAAAAAAAAQBAAAAAAIAAwAAAAAABwMAAAgBAAAJAAgBAAAAAAcDAAADAAAAAgACAAAAAAAAAAAAAAAAAAAACQAAAAAAAAAAAAAAAAAAAAIAAAAAAAUDAAAIAQAACQMJAwkDCQMJAwgBAAAFAwAAAAAAAAAAAAAAAAAAAAAAAAkAAAAAAAAACQIAAAAAAAAAAAAAAAACAwIDBgEEAgkBCQEJAAAACgAAAAkCCQEJAQQCBgECAQIBAAAAAAUDAAAIAQAACQAAAAAAAAAJAggBAAAFAwAAAAAAAAAAAAAAAAAAAAEAAAkACQEJAQkBCQEAAAAAAAAAAAAAAAACAAMAAAAAAAAAAAAIAQAACQIIAQAAAAAAAAAAAwAAAAIAAgAAAAAAAAAHAwAAAAAAAAkCAAAAAAAABwMAAAAAAAACAAEDAAAEAAAAAAAAAAUDAAAEAgUDAAAAAAAAAAAEAAEDAAAAAAAABAAEAAMAAAAAAAAABgEAAAAAAwAAAAQABAAAAAAAAQMAAAEDAAAAAAAAAAAAAAIAAAAAAAAAAAABAwAAAQMAAAAAAAAAAAAAAgMCAwAAAAACAAAAAAACAQIBAAAAAAAAAAA="),
-
-            //welcome to bomber/interceptor hell
-            new Structure("DgUACHNwbGl0dGVyBgAEaGFpbAIAEnRob3JpdW0td2FsbC1sYXJnZQEADHRob3JpdW0td2FsbAQAA2R1bw0ABGNvcmULAAttb25zb29uLXBhZAwACHVubG9hZGVyCgAPaW50ZXJjZXB0b3ItcGFkCAARdGl0YW5pdW0tY29udmV5b3IDAAVzYWx2bwkABnJpcHBsZQAAA2FpcgcAC2Rpc3RyaWJ1dG9yGRkAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAgIAAAEAAgMAAAIDAAACAwAAAwIAAAQBAwIAAAIDAAACAwAAAgMAAAEAAgIAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAABQAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAEBAQEAAAAAAAAGAQYBAwIAAAcAAAAIAgcAAAADAgAABgEGAQAAAAAAAAEBAQEAAAAAAgIAAAAACQEAAAoCAAAAAAAAAAAAAAgCAAAAAAAAAAAKAgAAAAAJAQAAAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgCCAIIAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAAAGAAoCAAAKAwAAAAALAwAACAIIAggCAAALAwAACgMAAAoCAAAGAAICAAAAAAAAAAAAAAYAAAAAAAAAAAAAAAAAAAAIAggCCAIAAAAAAAAAAAAAAAAAAAYAAAAAAAAAAAACAgAAAwIAAAAAAAAAAAAAAAAAAAgCCAIIAgAAAAAAAAAAAAAAAAMCAAACAgAAAAABAAAAAAAAAAAAAAALAwAAAAALAwAACAIIAggCAAALAwAAAAALAwAAAAAAAAAAAAABAAEAAwIAAAcAAAAAAAAAAAAAAAAAAAAMAwwBDAIAAAAAAAAAAAAAAAAHBQAAAwIAAAEAAQAAAAAAAAAAAAgDCAMIAwgDCAMMAQAAAAAAAAwCCAEIAQgBCAEIAQAAAAAAAAAAAQABAAQBBQAIAwgDCAMIAwgDCAMIAwwDAAANAAAADAMIAQgBCAEIAQgBCAEIAQUABAEBAAEAAwIAAAcAAAAIAwgDCAMIAwgDDAIAAAAAAAAMAwgBCAEIAQgBCAEHAAAAAwIAAAEAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAwCDAMMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQABAAIAAAADAgAAAAALAwAAAAALAwAACAAIAAgAAAALAwAAAAALAwAAAwIAAAIAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAgACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAABgAKAgAACgMAAAAAAAAAAAgACAAIAAAAAAAAAAoDAAAKAgAABgACAAAAAAAAAAAAAAEGAAAAAAAAAAAAAAALAwAACAAIAAgAAAALAwAAAAAAAAAAAAAGAAAAAAAAAAAAAgAAAAAAAAAAAAoCAAAAAAAAAAAIAAgACAAAAAAAAAAKAgAAAAAAAAAAAgAAAAAAAAAAAAAAAAAJAQAAAAAAAAMCAAAHBQAACAAHAAAAAwIAAAAAAAAAAAkBAAAAAAAAAAAAAAEBAQEAAAAAAAAGAQYBAAAAAAAAAAAIAAAAAAAAAAAABgMGAwAAAAAAAAEBAQEAAAAAAgMAAAEAAgMAAwIDAAACAwAAAwIAAAUAAwIAAAIBAAACAQAAAgEAAAEDAgMAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAABAEAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAA=="),
-
-            //welcome to unit hell
-            new Structure("DQoACHNwbGl0dGVyBAAMdGhvcml1bS13YWxsDAAEY29yZQEACmRhZ2dlci1wYWQHAAttb25zb29uLXBhZAsACHVubG9hZGVyCAAPaW50ZXJjZXB0b3ItcGFkBQARdGl0YW5pdW0tY29udmV5b3IJAAxyZXBhaXItcG9pbnQDAAVzYWx2bwAAA2FpcgIACXRpdGFuLXBhZAYAC3NvbGFyLXBhbmVsFRUAAAAAAAAAAAAAAAABAQAAAQEAAAAAAQEAAAEBAAAAAAAAAAAAAAAAAAAAAAIBAAAAAAIBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIBAAAAAAIBAAAAAAAAAAAAAAAAAAADAQAABAAEAAAABAAEAAMBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABQMGAAAABgAFAQAAAAAAAAAAAAAAAAAAAAAAAAIBAAAAAAcDAAAIAwAABQIJAAAACQAFAggDAAAAAAcDAAAAAAIBAAAAAAAAAAAAAAAAAAAAAAAABQIKAAACCgAFAgAAAAAAAAAAAAAAAAAAAAABAQAAAwEAAAgDAAAAAAAAAAAFAgACBQIAAAAAAAAIAwAAAwEAAAEBAAAAAAAAAAAAAAAAAAAAAAcDAAAFAgACBQIAAAcDAAAAAAAAAAAAAAAAAAABAQAABAMFAgUDBQMAAAAAAAALAQACCwEAAAAAAAAFAQUBBQIEAQEBAAAAAAAABAMGAAkACgAFAwUDCwIAAAAAAAALAQUBBQEKAAkABgAEAQAAAAAAAAAAAAAAAAAAAAMAAwADAAIAAAwAAAAAAgABAAEAAQAAAAAAAAAAAAABAQAABAMGAAkACgAFAwUDCwAAAAAAAAALAgUBBQEKAAkABgAEAQEBAAAAAAAABAMFAAUDBQMAAAAAAAALAQABCwAAAAAAAAAFAQUBBQAEAQAAAAABAQAAAwEAAAgDAAAAAAcDAAAFAAAABQAAAAcDAAAIAwAAAwEAAAEBAAAAAAAAAAAAAAAAAAAAAAAAAAAFAAAABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAwAABQAKAAAACgAFAAgDAAAAAAAAAAAAAAAAAAAAAAIBAAAAAAcDAAAAAAAABQAJAAAACQAFAAAAAAAAAAcDAAAAAAIBAAAAAAAAAAAAAAAAAAADAQAABQMGAAAABgAFAQMBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAEAAAABAAEAAAAAAAAAAAAAAAAAAAAAAAAAAIBAAAAAAIBAAEBAQAAAQEAAAAAAQEAAAEBAAAAAAIBAAAAAAIBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAA=")
-            */
-        };
-    }
-
     public void generate(Generation gen, Team team, int coreX, int coreY, int enemyX, int enemyY){
-        init();
-
         this.enemyX = enemyX;
         this.enemyY = enemyY;
         this.coreX = coreX;
@@ -116,118 +51,207 @@ public class FortressGenerator{
         this.gen = gen;
         this.team = team;
 
-        genOutposts();
+        gen();
     }
 
-    void genOutposts(){
-        int padding = 10;
-        int maxDifficulty = 13;
-        Array<Structure> selected = new Array<>();
-        Array<Rectangle> used = new Array<>();
-        Rectangle rect = new Rectangle();
-        Structure base = bases[Mathf.clamp((int)(bases.length * (float)gen.sector.difficulty / maxDifficulty) + gen.random.range(2), 0, bases.length-1)];
+    enum Pass{
+        walls((x, y) -> {
 
-        int maxIndex = (int)(1 + ((float)gen.sector.difficulty / maxDifficulty * (structures.length-2)));
+        });
 
-        for(int i = maxIndex/2; i < maxIndex; i++){
-            selected.add(structures[Math.min(i, structures.length-1)]);
+        final IntPositionConsumer cons;
+
+        Pass(IntPositionConsumer cons){
+            this.cons = cons;
+        }
+    }
+
+    void gen(){
+        gen.setBlock(enemyX, enemyY, StorageBlocks.core, team);
+
+        float difficultyScl = Mathf.clamp(gen.sector.difficulty / 20f + gen.random.range(1f/2f), 0f, 0.9999f);
+        int coreDst = FortressGenerator.coreDst*gen.sector.size;
+
+        Array<Block> turrets = find(b -> b instanceof ItemTurret);
+        Array<Block> powerTurrets = find(b -> b instanceof PowerTurret);
+        Array<Block> drills = find(b -> b instanceof Drill && !b.consumes.has(ConsumePower.class));
+        Array<Block> powerDrills = find(b -> b instanceof Drill && b.consumes.has(ConsumePower.class));
+        Array<Block> walls = find(b -> b instanceof Wall && !(b instanceof Door) && b.size == 1);
+        Array<Block> wallsLarge = find(b -> b instanceof Wall && !(b instanceof Door) && b.size == 2);
+
+        Block wall = walls.get((int)(difficultyScl * walls.size));
+        Block wallLarge = wallsLarge.get((int)(difficultyScl * walls.size));
+        Drill drill = (Drill) drills.get((int)(difficultyScl * drills.size));
+        Drill powerDrill = (Drill) powerDrills.get((int)(difficultyScl * powerDrills.size));
+
+        Turret powerTurret = (Turret) powerTurrets.get((int)(difficultyScl * powerTurrets.size));
+        Turret bigTurret = (Turret) turrets.get(Mathf.clamp((int)((difficultyScl+0.2f+gen.random.range(0.2f)) * turrets.size), 0, turrets.size-1));
+        Turret turret1 = (Turret) turrets.get(Mathf.clamp((int)((difficultyScl+gen.random.range(0.2f)) * turrets.size), 0, turrets.size-1));
+        Turret turret2 = (Turret) turrets.get(Mathf.clamp((int)((difficultyScl+gen.random.range(0.2f)) * turrets.size), 0, turrets.size-1));
+        float placeChance = difficultyScl*0.75f+0.25f;
+
+        IntIntMap ammoPerType = new IntIntMap();
+        for(Block turret : turrets){
+            if(!(turret instanceof ItemTurret)) continue;
+            ItemTurret t = (ItemTurret)turret;
+            int size = t.getAmmoTypes().length;
+            ammoPerType.put(t.id, Mathf.clamp((int)(size* difficultyScl) + gen.random.range(1), 0, size - 1));
         }
 
-        float baseChance = 0.8f / selected.size;
-
-        used.add(new Rectangle(enemyX - base.width()/2, enemyY - base.height()/2, base.width(), base.height()));
-        int elev = gen.tiles[enemyX][enemyY].getElevation();
-        for(int x = 0; x < base.width(); x++){
-            for(int y = 0; y < base.height(); y++){
-                Tile tile = gen.tiles[enemyX - base.width()/2 + x][enemyY - base.height()/2 + y];
-                StructBlock block = base.layout[x][y];
-                Block result = fixBlock(block.block);
-                tile.setElevation(elev);
-                tile.setRotation(block.rotation);
-                tile.setBlock(result, team);
+        TriFunction<Tile, Block, Predicate<Tile>, Boolean> checker = (current, block, pred) -> {
+            for(GridPoint2 point : Edges.getEdges(block.size)){
+                Tile tile = gen.tile(current.x + point.x, current.y + point.y);
+                if(tile != null){
+                    tile = tile.target();
+                    if(tile.getTeamID() == team.ordinal() && pred.evaluate(tile)){
+                        return true;
+                    }
+                }
             }
-        }
+            return false;
+        };
 
-        for(Structure struct : selected){
-            for(int x = padding; x < gen.width - padding; x++){
-                loop:
-                for(int y = padding; y < gen.height - padding; y++){
-                    rect.set(x - struct.layout.length, y - struct.layout[0].length, struct.layout.length, struct.layout[0].length);
-                    if(Vector2.dst(x, y, coreX, coreY) > minCoreDst && Vector2.dst(x, y, enemyX, enemyY) > 30 && world.tile(x, y).floor().liquidDrop == null &&
-                    (struct.ore == null || gen.tiles[x][y].floor().dropsItem(struct.ore)) && gen.random.chance(struct.chance * baseChance)){
-                        for(Rectangle other : used){
-                            if(other.overlaps(rect)){
-                                continue loop;
-                            }
-                        }
-                        used.add(new Rectangle(rect.x - 1, rect.y - 1, rect.width + 2, rect.height + 2));
-                        int elevation = world.tile(x, y).getElevation();
-                        for(int cx = 0; cx < struct.layout.length; cx++){
-                            for(int cy = 0; cy < struct.layout[0].length; cy++){
-                                int wx = x + cx - struct.layout.length/2;
-                                int wy = y + cy - struct.layout[0].length/2;
-                                StructBlock block = struct.layout[cx][cy];
-                                Tile tile = world.tile(wx, wy);
+        BiFunction<Block, Predicate<Tile>, IntPositionConsumer> seeder = (block, pred) -> (x, y) -> {
+            if(gen.canPlace(x, y, block) && ((block instanceof Wall && block.size == 1) || gen.random.chance(placeChance)) && checker.get(gen.tile(x, y), block, pred)){
+                gen.setBlock(x, y, block, team);
+            }
+        };
 
-                                Block result = fixBlock(block.block);
+        Array<IntPositionConsumer> passes = Array.with(
+            //initial seeding solar panels
+            (x, y) -> {
+                Block block = PowerBlocks.largeSolarPanel;
 
-                                //resupply points should not be placed anymore, they confuse units
-                                if(result != Blocks.air && tile.block().alwaysReplace){
-                                    tile.setElevation(elevation);
-                                    tile.setRotation(block.rotation);
-                                    tile.setBlock(result, team);
+                if(gen.random.chance(0.001*placeChance) && gen.canPlace(x, y, block)){
+                    gen.setBlock(x, y, block, team);
+                }
+            },
 
-                                    fill(tile);
-                                }
-                            }
+            //extra seeding
+            seeder.get(PowerBlocks.solarPanel, tile -> tile.block() == PowerBlocks.largeSolarPanel && gen.random.chance(0.3)),
+
+            //drills (not powered)
+            (x, y) -> {
+                if(!gen.random.chance(0.1*placeChance)) return;
+
+                Item item = gen.drillItem(x, y, drill);
+                if(item != null && item != Items.stone && item != Items.sand && gen.canPlace(x, y, drill)){
+                    gen.setBlock(x, y, drill, team);
+                }
+            },
+
+            //drills (not powered)
+            (x, y) -> {
+                if(!gen.random.chance(0.1*placeChance)) return;
+
+                if(gen.tile(x, y).floor().isLiquid && gen.tile(x, y).floor().liquidDrop == Liquids.water){
+                    gen.setBlock(x, y, LiquidBlocks.mechanicalPump, team);
+                }
+            },
+
+            //coal gens
+            seeder.get(PowerBlocks.combustionGenerator, tile -> tile.block() instanceof Drill && gen.drillItem(tile.x, tile.y, (Drill)tile.block()) == Items.coal && gen.random.chance(0.2)),
+
+            //drills (powered)
+            (x, y) -> {
+                if(gen.random.chance(0.4*placeChance) && gen.canPlace(x, y, powerDrill) && gen.drillItem(x, y, powerDrill) == Items.thorium  && checker.get(gen.tile(x, y), powerDrill, other -> other.block() instanceof PowerGenerator)){
+                    gen.setBlock(x, y, powerDrill, team);
+                }
+            },
+
+            //nuclear reactors
+            seeder.get(PowerBlocks.thoriumReactor, tile -> tile.block() instanceof Drill && gen.random.chance(0.2) && gen.drillItem(tile.x, tile.y, (Drill)tile.block()) == Items.thorium && gen.random.chance(0.3)),
+
+            //water extractors
+            seeder.get(ProductionBlocks.waterextractor, tile -> tile.block() instanceof NuclearReactor && gen.random.chance(0.5)),
+
+            //mend cores
+            seeder.get(DefenseBlocks.mendProjector, tile -> tile.block() instanceof PowerGenerator && gen.random.chance(0.03)),
+
+            //unit pads (assorted)
+            seeder.get(UnitBlocks.daggerPad, tile -> tile.block() instanceof MendProjector && gen.random.chance(0.3)),
+
+            //unit pads (assorted)
+            seeder.get(UnitBlocks.interceptorPad, tile -> tile.block() instanceof MendProjector && gen.random.chance(0.3)),
+
+            //unit pads (assorted)
+            seeder.get(UnitBlocks.titanPad, tile -> tile.block() instanceof MendProjector && gen.random.chance(0.23)),
+
+            //unit pads (assorted)
+            seeder.get(UnitBlocks.monsoonPad, tile -> tile.block() instanceof MendProjector && gen.random.chance(0.23)),
+
+            //power turrets
+            seeder.get(powerTurret, tile -> tile.block() instanceof PowerGenerator && gen.random.chance(0.04)),
+
+            //repair point
+            seeder.get(UnitBlocks.repairPoint, tile -> tile.block() instanceof PowerGenerator && gen.random.chance(0.1)),
+
+            //turrets1
+            seeder.get(turret1, tile -> tile.block() instanceof Pump && gen.random.chance(0.22 - turret1.size*0.02)),
+
+            //turrets2
+            seeder.get(turret2, tile -> tile.block() instanceof Drill && gen.random.chance(0.12 - turret2.size*0.02)),
+
+            //vaults
+            seeder.get(StorageBlocks.vault, tile -> tile.block() instanceof CoreBlock && gen.random.chance(0.4)),
+
+            //big turrets
+            seeder.get(bigTurret, tile -> tile.block() instanceof StorageBlock && gen.random.chance(0.65)),
+
+            //walls
+            (x, y) -> {
+                if(!gen.canPlace(x, y, wall)) return;
+
+                for(GridPoint2 point : Geometry.d8){
+                    Tile tile = gen.tile(x + point.x, y + point.y);
+                    if(tile != null){
+                        tile = tile.target();
+                        if(tile.getTeamID() == team.ordinal() && !(tile.block() instanceof Wall) && !(tile.block() instanceof UnitPad)){
+                            gen.setBlock(x, y, wall, team);
+                            break;
                         }
                     }
+                }
+            },
+
+            //fill up turrets w/ ammo
+            (x, y) -> {
+                Tile tile = gen.tile(x, y);
+                Block block = tile.block();
+
+                if(block instanceof PowerTurret){
+                    tile.entity.power.amount = block.powerCapacity;
+                }else if(block instanceof ItemTurret){
+                    ItemTurret turret = (ItemTurret)block;
+                    AmmoType[] type = turret.getAmmoTypes();
+                    int index = ammoPerType.get(block.id, 0);
+                    block.handleStack(type[index].item, block.acceptStack(type[index].item, 1000, tile, null), tile, null);
+                }else if(block instanceof NuclearReactor){
+                    tile.entity.items.add(Items.thorium, 30);
+                }
+            }
+        );
+
+        for(IntPositionConsumer i : passes){
+            for(int x = 0; x < gen.width; x++){
+                for(int y = 0; y < gen.height; y++){
+                    if(Vector2.dst(x, y, enemyX, enemyY) > coreDst){
+                        continue;
+                    }
+
+                    i.accept(x, y);
                 }
             }
         }
     }
 
-    Block fixBlock(Block result){
-        if(result == UnitBlocks.dronePad) result = DefenseBlocks.copperWallLarge;
-        if(result == UnitBlocks.fabricatorPad) result = DefenseBlocks.copperWallLarge;
-        return result;
-    }
-
-    void fill(Tile tile){
-        Block block = tile.block();
-
-        if(block instanceof PowerTurret){
-            tile.entity.power.amount = block.powerCapacity;
-        }else if(block instanceof ItemTurret){
-            ItemTurret turret = (ItemTurret)block;
-            AmmoType[] type = turret.getAmmoTypes();
-            block.handleStack(type[0].item, block.acceptStack(type[0].item, 1000, tile, null), tile, null);
+    Array<Block> find(Predicate<Block> pred){
+        Array<Block> out = new Array<>();
+        for(Block block : content.blocks()){
+            if(pred.evaluate(block) && Recipe.getByResult(block) != null){
+                out.add(block);
+            }
         }
-    }
-
-    static class Structure{
-        public final StructBlock[][] layout;
-        public final Item ore;
-        public final float chance;
-
-        public Structure(float chance, Item ore, String encoding){
-            this.ore = ore;
-            this.layout = StructureFormat.read(encoding);
-            this.chance = chance;
-        }
-
-        public Structure(String encoding){
-            this.ore = null;
-            this.layout = StructureFormat.read(encoding);
-            this.chance = 0;
-        }
-
-        int width(){
-            return layout.length;
-        }
-
-        int height(){
-            return layout[0].length;
-        }
+        return out;
     }
 }

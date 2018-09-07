@@ -25,6 +25,7 @@ import io.anuke.ucore.scene.ui.layout.Unit;
 import io.anuke.ucore.util.OS;
 import io.anuke.ucore.util.Translator;
 
+import java.util.Arrays;
 import java.util.Locale;
 
 public class Vars{
@@ -37,9 +38,9 @@ public class Vars{
     //team of the enemy in waves
     public static final Team waveTeam = Team.red;
 
-    //discord group URL
-    public static final String discordURL = "https://discord.gg/BKADYds";
+    public static final String discordURL = "https://discord.gg/mindustry";
     public static final String releasesURL = "https://api.github.com/repos/Anuken/Mindustry/releases";
+    public static final String crashReportURL = "http://mindustry.us.to/report";
     public static final int maxTextLength = 150;
     public static final int maxNameLength = 40;
     public static final float itemSize = 5f;
@@ -49,22 +50,22 @@ public class Vars{
     public static final int invalidSector = Integer.MAX_VALUE;
     public static Locale[] locales;
     public static final Color[] playerColors = {
-            Color.valueOf("82759a"),
-            Color.valueOf("c0c1c5"),
-            Color.valueOf("fff0e7"),
-            Color.valueOf("7d2953"),
-            Color.valueOf("ff074e"),
-            Color.valueOf("ff072a"),
-            Color.valueOf("ff76a6"),
-            Color.valueOf("a95238"),
-            Color.valueOf("ffa108"),
-            Color.valueOf("feeb2c"),
-            Color.valueOf("ffcaa8"),
-            Color.valueOf("008551"),
-            Color.valueOf("00e339"),
-            Color.valueOf("423c7b"),
-            Color.valueOf("4b5ef1"),
-            Color.valueOf("2cabfe"),
+        Color.valueOf("82759a"),
+        Color.valueOf("c0c1c5"),
+        Color.valueOf("fff0e7"),
+        Color.valueOf("7d2953"),
+        Color.valueOf("ff074e"),
+        Color.valueOf("ff072a"),
+        Color.valueOf("ff76a6"),
+        Color.valueOf("a95238"),
+        Color.valueOf("ffa108"),
+        Color.valueOf("feeb2c"),
+        Color.valueOf("ffcaa8"),
+        Color.valueOf("008551"),
+        Color.valueOf("00e339"),
+        Color.valueOf("423c7b"),
+        Color.valueOf("4b5ef1"),
+        Color.valueOf("2cabfe"),
     };
     //server port
     public static final int port = 6567;
@@ -75,6 +76,8 @@ public class Vars{
     public static boolean android;
     //shorthand for whether or not this is running on GWT
     public static boolean gwt;
+    //main data directory
+    public static FileHandle dataDirectory;
     //directory for user-created map data
     public static FileHandle customMapDirectory;
     //save file directory
@@ -106,6 +109,7 @@ public class Vars{
     public static float baseControllerSpeed = 11f;
     //only if smoothCamera
     public static boolean snapCamera = true;
+    public static ContentLoader content;
     public static GameState state;
     public static ThreadHandler threads;
 
@@ -146,7 +150,11 @@ public class Vars{
             }
         }
 
+        Arrays.sort(locales, (l1, l2) -> Platform.instance.getLocaleName(l1).compareTo(Platform.instance.getLocaleName(l2)));
+
         Version.init();
+
+        content = new ContentLoader();
 
         playerGroup = Entities.addGroup(Player.class).enableMapping();
         tileGroup = Entities.addGroup(TileEntity.class, false);
@@ -178,8 +186,9 @@ public class Vars{
         gwt = Gdx.app.getType() == ApplicationType.WebGL;
 
         if(!gwt){
-            customMapDirectory = OS.getAppDataDirectory("Mindustry").child("maps/");
-            saveDirectory = OS.getAppDataDirectory("Mindustry").child("saves/");
+            dataDirectory = OS.getAppDataDirectory("Mindustry");
+            customMapDirectory = dataDirectory.child("maps/");
+            saveDirectory = dataDirectory.child("saves/");
         }
 
         fontScale = Math.max(Unit.dp.scl(1f) / 2f, 0.5f);

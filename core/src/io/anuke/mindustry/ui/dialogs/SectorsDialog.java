@@ -31,6 +31,7 @@ public class SectorsDialog extends FloatingDialog{
     }
 
     void setup(){
+        selected = null;
         content().clear();
         buttons().clear();
 
@@ -39,11 +40,11 @@ public class SectorsDialog extends FloatingDialog{
         content().label(() -> Bundles.format("text.sector", selected == null ? Bundles.get("text.none") :
         (selected.x + ", " + selected.y + (!selected.complete && selected.saveID != -1 ? " " + Bundles.get("text.sector.locked") : ""))
                 + (selected.saveID == -1 ? " " + Bundles.get("text.sector.unexplored") :
-                    (selected.hasSave() ? " [accent]/[white] " + Bundles.format("text.sector.time", selected.getSave().getPlayTime()) : ""))));
+                    (selected.hasSave() ? "  [accent]/[white] " + Bundles.format("text.sector.time", selected.getSave().getPlayTime()) : ""))));
         content().row();
         content().label(() -> Bundles.format("text.mission", selected == null || selected.completedMissions >= selected.missions.size
         ? Bundles.get("text.none") : selected.missions.get(selected.completedMissions).displayString())
-                        + " [WHITE]" + (selected == null ? "" : Bundles.format("text.save.difficulty", "[LIGHT_GRAY]" + selected.getDifficulty().toString())));
+                        + "[WHITE] " + (selected == null ? "" : Bundles.format("text.save.difficulty", "[LIGHT_GRAY]" + selected.getDifficulty().toString())));
         content().row();
         content().add(new SectorView()).grow();
         content().row();
@@ -65,7 +66,7 @@ public class SectorsDialog extends FloatingDialog{
 
     class SectorView extends Element{
         float lastX, lastY;
-        float sectorSize = Unit.dp.scl(100f);
+        float sectorSize = Unit.dp.scl(32*4);
         float sectorPadding = Unit.dp.scl(14f);
         boolean clicked = false;
         float panX = -sectorPadding/2f, panY = -sectorSize/2f;

@@ -3,7 +3,7 @@ package io.anuke.mindustry.content.fx;
 import com.badlogic.gdx.graphics.Color;
 import io.anuke.mindustry.content.Liquids;
 import io.anuke.mindustry.graphics.Palette;
-import io.anuke.mindustry.type.ContentList;
+import io.anuke.mindustry.game.ContentList;
 import io.anuke.ucore.core.Effects.Effect;
 import io.anuke.ucore.graphics.Draw;
 import io.anuke.ucore.graphics.Fill;
@@ -11,7 +11,7 @@ import io.anuke.ucore.util.Angles;
 import io.anuke.ucore.util.Mathf;
 
 public class EnvironmentFx extends FxList implements ContentList{
-    public static Effect burning, fire, smoke, steam, fireballsmoke, ballfire, freezing, melting, wet, oily;
+    public static Effect burning, fire, smoke, steam, fireballsmoke, ballfire, freezing, melting, wet, oily, overdriven;
 
     @Override
     public void load(){
@@ -111,6 +111,16 @@ public class EnvironmentFx extends FxList implements ContentList{
 
             Angles.randLenVectors(e.id, 2, 1f + e.fin() * 2f, (x, y) -> {
                 Fill.circle(e.x + x, e.y + y, e.fout() * 1f);
+            });
+
+            Draw.color();
+        });
+
+        overdriven = new Effect(20f, e -> {
+            Draw.color(Palette.accent);
+
+            Angles.randLenVectors(e.id, 2, 1f + e.fin() * 2f, (x, y) -> {
+                Fill.square(e.x + x, e.y + y, e.fout() * 2.3f+0.5f);
             });
 
             Draw.color();

@@ -3,7 +3,7 @@ package io.anuke.mindustry.content.fx;
 import com.badlogic.gdx.graphics.Color;
 import io.anuke.mindustry.entities.effect.GroundEffectEntity.GroundEffect;
 import io.anuke.mindustry.graphics.Palette;
-import io.anuke.mindustry.type.ContentList;
+import io.anuke.mindustry.game.ContentList;
 import io.anuke.ucore.core.Effects.Effect;
 import io.anuke.ucore.graphics.Draw;
 import io.anuke.ucore.graphics.Fill;
@@ -19,7 +19,7 @@ public class BlockFx extends FxList implements ContentList{
     public static Effect reactorsmoke, nuclearsmoke, nuclearcloud, redgeneratespark, generatespark, fuelburn, plasticburn,
     pulverize, pulverizeRed, pulverizeRedder, pulverizeSmall, pulverizeMedium, producesmoke, smeltsmoke, formsmoke, blastsmoke,
     lava, dooropen, doorclose, dooropenlarge, doorcloselarge, purify, purifyoil, purifystone, generate, mine, mineBig, mineHuge,
-    smelt, teleportActivate, teleport, teleportOut, ripple, bubble, commandSend;
+    smelt, teleportActivate, teleport, teleportOut, ripple, bubble, commandSend, healBlock, healBlockFull, healWaveMend, overdriveWave;
 
     @Override
     public void load(){
@@ -282,6 +282,34 @@ public class BlockFx extends FxList implements ContentList{
             Draw.color(Palette.command);
             Lines.stroke(e.fout() * 2f);
             Lines.poly(e.x, e.y, 40, 4f + e.finpow() * 120f);
+            Draw.color();
+        });
+
+        healWaveMend = new Effect(40, e -> {
+            Draw.color(e.color);
+            Lines.stroke(e.fout() * 2f);
+            Lines.poly(e.x, e.y, 30, e.finpow() * e.rotation);
+            Draw.color();
+        });
+
+        overdriveWave = new Effect(50, e -> {
+            Draw.color(e.color);
+            Lines.stroke(e.fout() * 1f);
+            Lines.poly(e.x, e.y, 30, e.finpow() * e.rotation);
+            Draw.color();
+        });
+
+        healBlock = new Effect(20, e -> {
+            Draw.color(Palette.heal);
+            Lines.stroke(2f * e.fout() + 0.5f);
+            Lines.square(e.x, e.y, 1f + (e.fin() * e.rotation * tilesize/2f-1f));
+            Draw.color();
+        });
+
+        healBlockFull = new Effect(20, e -> {
+            Draw.color(e.color);
+            Draw.alpha(e.fout());
+            Fill.square(e.x, e.y, e.rotation * tilesize);
             Draw.color();
         });
     }

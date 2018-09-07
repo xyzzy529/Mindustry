@@ -4,7 +4,7 @@ import com.badlogic.gdx.graphics.Color;
 import io.anuke.mindustry.content.Items;
 import io.anuke.mindustry.content.Liquids;
 import io.anuke.mindustry.content.fx.BlockFx;
-import io.anuke.mindustry.type.ContentList;
+import io.anuke.mindustry.game.ContentList;
 import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.blocks.production.Cultivator;
 import io.anuke.mindustry.world.blocks.production.Drill;
@@ -88,7 +88,7 @@ public class ProductionBlocks extends BlockList implements ContentList{
             updateEffect = BlockFx.pulverize;
             liquidCapacity = 50f;
             updateEffectChance = 0.05f;
-            pumpAmount = 0.08f;
+            pumpAmount = 0.09f;
             size = 3;
             liquidCapacity = 30f;
 

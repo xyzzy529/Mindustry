@@ -48,8 +48,6 @@ public class NetworkIO{
             stream.writeInt(state.wave); //wave
             stream.writeFloat(state.wavetime); //wave countdown
 
-            stream.writeBoolean(state.friendlyFire); //friendly fire state
-
             stream.writeInt(player.id);
             player.write(stream);
 
@@ -123,7 +121,7 @@ public class NetworkIO{
             //write team data
             for(Team team : Team.all){
                 TeamData data = state.teams.get(team);
-                stream.writeByte(data.team.ordinal());
+                stream.writeByte(team.ordinal());
 
                 stream.writeByte(data.enemies.size());
                 for(Team enemy : data.enemies){
@@ -175,12 +173,9 @@ public class NetworkIO{
             int wave = stream.readInt();
             float wavetime = stream.readFloat();
 
-            boolean friendlyfire = stream.readBoolean();
-
             state.wave = wave;
             state.wavetime = wavetime;
             state.mode = GameMode.values()[mode];
-            state.friendlyFire = friendlyfire;
 
             Entities.clear();
             int id = stream.readInt();
@@ -315,6 +310,8 @@ public class NetworkIO{
         buffer.putInt(playerGroup.size());
         buffer.putInt(state.wave);
         buffer.putInt(Version.build);
+        buffer.put((byte)Version.type.getBytes().length);
+        buffer.put(Version.type.getBytes());
         return buffer;
     }
 
@@ -333,7 +330,11 @@ public class NetworkIO{
         int players = buffer.getInt();
         int wave = buffer.getInt();
         int version = buffer.getInt();
+        byte tlength = buffer.get();
+        byte[] tb = new byte[tlength];
+        buffer.get(tb);
+        String vertype = new String(tb);
 
-        return new Host(host, hostAddress, map, wave, players, version);
+        return new Host(host, hostAddress, map, wave, players, version, vertype);
     }
 }

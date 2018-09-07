@@ -67,6 +67,10 @@ public class BlocksFragment extends Fragment{
                 descTable = new Table("button");
                 descTable.visible(() -> (hoverRecipe != null || input.recipe != null) && shown); //make sure it's visible when necessary
                 descTable.update(() -> {
+                    if(state.is(State.menu)){
+                        descTable.clear();
+                        control.input(0).recipe = null;
+                    }
                     // note: This is required because there is no direct connection between input.recipe and the description ui.
                     // If input.recipe gets set to null, a proper cleanup of the ui elements is required.
                     boolean anyRecipeShown = input.recipe != null || hoverRecipe != null;
@@ -89,14 +93,12 @@ public class BlocksFragment extends Fragment{
             }).bottom().right().get();
         });
 
-        Events.on(WorldLoadEvent.class, this::rebuild);
+        Events.on(WorldLoadEvent.class, event -> rebuild());
 
         rebuild();
     }
 
-    /**
-     * Rebuilds the whole placement menu, attempting to preserve previous state.
-     */
+    /**Rebuilds the whole placement menu, attempting to preserve previous state.*/
     void rebuild(){
         selectTable.clear();
 
@@ -169,7 +171,7 @@ public class BlocksFragment extends Fragment{
 
             //add actual recipes
             for(Recipe r : recipes){
-                if((r.debugOnly && !debug) || (r.desktopOnly && mobile) || (r.targetMode != null && r.targetMode != state.mode)) continue;
+                if((r.debugOnly && !debug) || (r.desktopOnly && mobile) || (r.isPad && !state.mode.showPads)) continue;
 
                 ImageButton image = new ImageButton(new TextureRegion(), "select");
 
@@ -258,7 +260,7 @@ public class BlocksFragment extends Fragment{
         }
 
         selectTable.row();
-        selectTable.add(stack).growX().left().top().colspan(Category.values().length).padBottom(-5).height((size + 12) * rowsUsed);
+        selectTable.add(stack).growX().left().top().colspan(Category.values().length).padBottom(-5).height((size + 12) * Math.min(rowsUsed, 3));
     }
 
     void toggle(float t, Interpolation ip){

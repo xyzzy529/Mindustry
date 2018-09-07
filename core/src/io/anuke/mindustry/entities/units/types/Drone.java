@@ -18,6 +18,7 @@ import io.anuke.mindustry.graphics.Palette;
 import io.anuke.mindustry.net.Net;
 import io.anuke.mindustry.type.Item;
 import io.anuke.mindustry.type.ItemStack;
+import io.anuke.mindustry.type.ItemType;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.world.blocks.BuildBlock;
 import io.anuke.mindustry.world.blocks.BuildBlock.BuildEntity;
@@ -190,7 +191,7 @@ public class Drone extends FlyingUnit implements BuilderTrait{
         public void update(){
             ItemDrop item = (ItemDrop) target;
 
-            if(item == null || inventory.isFull() || !inventory.canAcceptItem(item.getItem(), 1)){
+            if(item == null || inventory.isFull() || item.getItem().type != ItemType.material || !inventory.canAcceptItem(item.getItem(), 1)){
                 setState(drop);
                 return;
             }
@@ -220,6 +221,12 @@ public class Drone extends FlyingUnit implements BuilderTrait{
                 return;
             }
 
+            if(inventory.getItem().item.type != ItemType.material){
+                inventory.clearItem();
+                setState(mine);
+                return;
+            }
+
             target = getClosestCore();
 
             if(target == null) return;
@@ -244,7 +251,7 @@ public class Drone extends FlyingUnit implements BuilderTrait{
         }
 
         public void update(){
-            if(health >= health){
+            if(health >= maxHealth()){
                 state.set(attack);
             }else if(!targetHasFlag(BlockFlag.repair)){
                 if(timer.get(timerTarget, 20)){
@@ -268,11 +275,11 @@ public class Drone extends FlyingUnit implements BuilderTrait{
     private static void initEvents(){
         if(initialized) return;
 
-        Events.on(BlockBuildEvent.class, (team, tile) -> {
-            EntityGroup<BaseUnit> group = unitGroups[team.ordinal()];
+        Events.on(BlockBuildEvent.class, event -> {
+            EntityGroup<BaseUnit> group = unitGroups[event.team.ordinal()];
 
-            if(!(tile.entity instanceof BuildEntity)) return;
-            BuildEntity entity = tile.entity();
+            if(!(event.tile.entity instanceof BuildEntity)) return;
+            BuildEntity entity = event.tile.entity();
 
             for(BaseUnit unit : group.all()){
                 if(unit instanceof Drone){

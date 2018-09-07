@@ -149,8 +149,8 @@ public class ItemDrop extends SolidEntity implements SaveTrait, SyncTrait, DrawT
         int stored = Mathf.clamp(amount / 6, 1, 8);
 
         for(int i = 0; i < stored; i++){
-            float px = stored == 1 ? 0 : Mathf.randomSeedRange(i + 1, 4f);
-            float py = stored == 1 ? 0 : Mathf.randomSeedRange(i + 2, 4f);
+            float px = stored == 1 ? 0 : (int)Mathf.randomSeedRange(i + 1, 4f);
+            float py = stored == 1 ? 0 : (int)Mathf.randomSeedRange(i + 2, 4f);
             Draw.rect(item.region, x + px, y + py, size, size);
         }
 
@@ -228,7 +228,7 @@ public class ItemDrop extends SolidEntity implements SaveTrait, SyncTrait, DrawT
     public void readSave(DataInput data) throws IOException{
         x = data.readFloat();
         y = data.readFloat();
-        item = Item.getByID(data.readByte());
+        item = content.item(data.readByte());
         amount = data.readShort();
         add();
     }
@@ -244,7 +244,7 @@ public class ItemDrop extends SolidEntity implements SaveTrait, SyncTrait, DrawT
     @Override
     public void read(DataInput data, long time) throws IOException{
         interpolator.read(x, y, data.readFloat(), data.readFloat(), time);
-        item = Item.getByID(data.readByte());
+        item = content.item(data.readByte());
         amount = data.readShort();
     }
 }

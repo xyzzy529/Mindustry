@@ -2,7 +2,7 @@ package io.anuke.mindustry.content.blocks;
 
 import io.anuke.mindustry.content.Liquids;
 import io.anuke.mindustry.content.fx.BlockFx;
-import io.anuke.mindustry.type.ContentList;
+import io.anuke.mindustry.game.ContentList;
 import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.blocks.distribution.WarpGate;
 import io.anuke.mindustry.world.blocks.power.*;
@@ -54,7 +54,7 @@ public class PowerBlocks extends BlockList implements ContentList{
         thoriumReactor = new NuclearReactor("thorium-reactor"){{
             size = 3;
             health = 700;
-            powerMultiplier = 0.8f;
+            powerMultiplier = 1.1f;
         }};
 
         fusionReactor = new FusionReactor("fusion-reactor"){{
@@ -73,12 +73,13 @@ public class PowerBlocks extends BlockList implements ContentList{
 
         powerNode = new PowerNode("power-node"){{
             shadow = "shadow-round-1";
+            powerSpeed = 0.5f;
             maxNodes = 4;
         }};
 
         powerNodeLarge = new PowerNode("power-node-large"){{
             size = 2;
-            powerSpeed = 1f;
+            powerSpeed = 1.5f;
             maxNodes = 6;
             laserRange = 7.5f;
             shadow = "shadow-round-2";

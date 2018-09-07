@@ -21,15 +21,12 @@ import io.anuke.mindustry.game.Team;
 import io.anuke.mindustry.graphics.*;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.world.meta.BlockFlag;
-import io.anuke.ucore.core.Core;
-import io.anuke.ucore.core.Effects;
-import io.anuke.ucore.core.Graphics;
-import io.anuke.ucore.core.Settings;
+import io.anuke.ucore.core.*;
 import io.anuke.ucore.entities.EntityDraw;
 import io.anuke.ucore.entities.EntityGroup;
-import io.anuke.ucore.entities.impl.BaseEntity;
 import io.anuke.ucore.entities.impl.EffectEntity;
 import io.anuke.ucore.entities.trait.DrawTrait;
+import io.anuke.ucore.entities.trait.Entity;
 import io.anuke.ucore.entities.trait.SolidTrait;
 import io.anuke.ucore.function.Consumer;
 import io.anuke.ucore.function.Predicate;
@@ -88,8 +85,8 @@ public class Renderer extends RendererModule{
                         entity.data = data;
                         entity.id++;
                         entity.set(x, y);
-                        if(data instanceof BaseEntity){
-                            entity.setParent((BaseEntity) data);
+                        if(data instanceof Entity){
+                            entity.setParent((Entity) data);
                         }
                         threads.runGraphics(() -> effectGroup.add(entity));
                     }else{
@@ -100,6 +97,9 @@ public class Renderer extends RendererModule{
                         entity.id++;
                         entity.data = data;
                         entity.set(x, y);
+                        if(data instanceof Entity){
+                            entity.setParent((Entity) data);
+                        }
                         threads.runGraphics(() -> groundEffectGroup.add(entity));
                     }
                 }
@@ -155,16 +155,13 @@ public class Renderer extends RendererModule{
         }else{
             Vector2 position = averagePosition();
 
-            if(!mobile){
+            if(players[0].isDead()){
+                smoothCamera(position.x + 0.0001f, position.y + 0.0001f, 0.08f);
+            }else if(!mobile){
                 setCamera(position.x + 0.0001f, position.y + 0.0001f);
             }
-
-            if(world.getSector() == null){
-                clampCamera(-tilesize / 2f, -tilesize / 2f + 1, world.width() * tilesize - tilesize / 2f, world.height() * tilesize - tilesize / 2f);
-            }else{
-                camera.position.x = Mathf.clamp(camera.position.x, -tilesize / 2f, world.width() * tilesize - tilesize / 2f);
-                camera.position.y = Mathf.clamp(camera.position.y, -tilesize / 2f, world.height() * tilesize - tilesize / 2f);
-            }
+            camera.position.x = Mathf.clamp(camera.position.x, -tilesize / 2f, world.width() * tilesize - tilesize / 2f);
+            camera.position.y = Mathf.clamp(camera.position.y, -tilesize / 2f, world.height() * tilesize - tilesize / 2f);
 
             float prex = camera.position.x, prey = camera.position.y;
             updateShake(0.75f);
@@ -246,11 +243,14 @@ public class Renderer extends RendererModule{
         blocks.drawBlocks(Layer.overlay);
 
         if(itemGroup.size() > 0){
-            Shaders.outline.color.set(Team.none.color);
-
-            Graphics.beginShaders(Shaders.outline);
+            Graphics.surface(effectSurface);
             drawAndInterpolate(itemGroup);
-            Graphics.endShaders();
+            Graphics.surface();
+
+            Draw.color(0, 0, 0, 0.2f);
+            Draw.rect(effectSurface, -1, -1);
+            Draw.color();
+            Draw.rect(effectSurface, 0, 0);
         }
 
         drawAllTeams(false);
@@ -292,23 +292,23 @@ public class Renderer extends RendererModule{
 
         float trnsX = -12, trnsY = -13;
 
-        Graphics.end();
-        Core.batch.getTransformMatrix().translate(trnsX, trnsY, 0);
-        Graphics.begin();
+        //Graphics.end();
+        //Core.batch.getTransformMatrix().translate(trnsX, trnsY, 0);
+        //Graphics.begin();
 
         for(EntityGroup<? extends BaseUnit> group : unitGroups){
             if(!group.isEmpty()){
-                drawAndInterpolate(group, unit -> unit.isFlying() && !unit.isDead(), Unit::drawShadow);
+                drawAndInterpolate(group, unit -> unit.isFlying() && !unit.isDead(), baseUnit -> baseUnit.drawShadow(trnsX, trnsY));
             }
         }
 
         if(!playerGroup.isEmpty()){
-            drawAndInterpolate(playerGroup, unit -> unit.isFlying() && !unit.isDead(), Unit::drawShadow);
+            drawAndInterpolate(playerGroup, unit -> unit.isFlying() && !unit.isDead(), player -> player.drawShadow(trnsX, trnsY));
         }
 
-        Graphics.end();
-        Core.batch.getTransformMatrix().translate(-trnsX, -trnsY, 0);
-        Graphics.begin();
+        //Graphics.end();
+        //Core.batch.getTransformMatrix().translate(-trnsX, -trnsY, 0);
+        //Graphics.begin();
 
         //TODO this actually isn't necessary
         Draw.color(0, 0, 0, 0.15f);
@@ -410,9 +410,7 @@ public class Renderer extends RendererModule{
     public Vector2 averagePosition(){
         avgPosition.setZero();
 
-        drawAndInterpolate(playerGroup, p -> p.isLocal, p -> {
-            avgPosition.add(p.x, p.y);
-        });
+        drawAndInterpolate(playerGroup, p -> p.isLocal, p -> avgPosition.add(p.x, p.y));
 
         avgPosition.scl(1f / players.length);
         return avgPosition;
