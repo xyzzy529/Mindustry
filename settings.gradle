@@ -13,3 +13,8 @@ if(System.properties["release"] == null || System.properties["release"].equals("
 }else{
     println("Not including local repositories.")
 }
+
+if (new File(settingsDir, '../teavm-libgdx').exists()) {
+    include ':teavm-libgdx'
+    project(':teavm-libgdx').projectDir = new File(settingsDir, '../teavm-libgdx')
+}

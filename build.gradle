@@ -109,7 +109,8 @@ project(":html") {
     dependencies {
         compile project(":core")
 
-        compile "com.github.Anuken:teavm-libgdx:ccc364e2a0"
+        compile project(":teavm-libgdx")
+        //compile "com.github.Anuken:teavm-libgdx:a8399c3f17c2d08f8f24489368ae313af87a8be8"
     }
 
 }
