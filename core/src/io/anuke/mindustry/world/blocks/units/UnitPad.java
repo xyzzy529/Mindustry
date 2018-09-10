@@ -25,7 +25,6 @@ import io.anuke.mindustry.world.meta.StatUnit;
 import io.anuke.mindustry.world.modules.InventoryModule;
 import io.anuke.ucore.core.Effects;
 import io.anuke.ucore.core.Graphics;
-import io.anuke.ucore.core.Timers;
 import io.anuke.ucore.graphics.Draw;
 import io.anuke.ucore.graphics.Lines;
 import io.anuke.ucore.util.EnumSet;
@@ -59,6 +58,8 @@ public class UnitPad extends Block{
 
     @Remote(called = Loc.server)
     public static void onUnitFactorySpawn(Tile tile){
+        if(!(tile.entity instanceof UnitFactoryEntity) || !(tile.block() instanceof UnitPad)) return;
+
         UnitFactoryEntity entity = tile.entity();
         UnitPad factory = (UnitPad) tile.block();
 
@@ -147,10 +148,10 @@ public class UnitPad extends Block{
     public void update(Tile tile){
         UnitFactoryEntity entity = tile.entity();
 
-        entity.time += Timers.delta() * entity.speedScl;
+        entity.time += entity.delta() * entity.speedScl;
 
         if(tile.isEnemyCheat()){
-            entity.warmup += Timers.delta();
+            entity.warmup += entity.delta();
         }
 
         if(!tile.isEnemyCheat()){
@@ -158,7 +159,7 @@ public class UnitPad extends Block{
 
             if(hasRequirements(entity.items, entity.buildTime / produceTime) && entity.cons.valid()){
 
-                entity.buildTime += Timers.delta();
+                entity.buildTime += entity.delta();
                 entity.speedScl = Mathf.lerpDelta(entity.speedScl, 1f, 0.05f);
             }else{
                 entity.speedScl = Mathf.lerpDelta(entity.speedScl, 0f, 0.05f);
@@ -167,7 +168,7 @@ public class UnitPad extends Block{
         }else if(entity.warmup > produceTime*gracePeriodMultiplier * Vars.state.difficulty.spawnerScaling){
             float speedMultiplier = Math.min(0.1f + (entity.warmup - produceTime * gracePeriodMultiplier * Vars.state.difficulty.spawnerScaling) / speedupTime, maxSpeedup);
             //otherwise, it's an enemy, cheat by not requiring resources
-            entity.buildTime += Timers.delta() * speedMultiplier;
+            entity.buildTime += entity.delta() * speedMultiplier;
             entity.speedScl = Mathf.lerpDelta(entity.speedScl, 1f, 0.05f);
         }else{
             entity.speedScl = Mathf.lerpDelta(entity.speedScl, 0f, 0.05f);

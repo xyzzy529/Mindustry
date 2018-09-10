@@ -4,7 +4,6 @@ import com.badlogic.gdx.Application.ApplicationType;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.utils.Json;
 import io.anuke.mindustry.core.*;
 import io.anuke.mindustry.entities.Player;
 import io.anuke.mindustry.entities.TileEntity;
@@ -16,7 +15,9 @@ import io.anuke.mindustry.entities.traits.SyncTrait;
 import io.anuke.mindustry.entities.units.BaseUnit;
 import io.anuke.mindustry.game.Team;
 import io.anuke.mindustry.game.Version;
+import io.anuke.mindustry.gen.Serialization;
 import io.anuke.mindustry.net.Net;
+import io.anuke.mindustry.world.blocks.defense.ForceProjector.ShieldEntity;
 import io.anuke.ucore.entities.Entities;
 import io.anuke.ucore.entities.EntityGroup;
 import io.anuke.ucore.entities.impl.EffectEntity;
@@ -129,7 +130,7 @@ public class Vars{
     public static EntityGroup<EffectEntity> effectGroup;
     public static EntityGroup<DrawTrait> groundEffectGroup;
     public static EntityGroup<ItemDrop> itemGroup;
-
+    public static EntityGroup<ShieldEntity> shieldGroup;
     public static EntityGroup<Puddle> puddleGroup;
     public static EntityGroup<Fire> fireGroup;
     public static EntityGroup<BaseUnit>[] unitGroups;
@@ -137,9 +138,10 @@ public class Vars{
     public static final Translator[] tmptr = new Translator[]{new Translator(), new Translator(), new Translator(), new Translator()};
 
     public static void init(){
+        Serialization.init();
 
         //load locales
-        String[] stra = new Json().fromJson(String[].class, Gdx.files.internal("locales.json"));
+        String[] stra = Gdx.files.internal("locales").readString().split("\n");
         locales = new Locale[stra.length];
         for(int i = 0; i < locales.length; i++){
             String code = stra[i];
@@ -161,9 +163,10 @@ public class Vars{
         bulletGroup = Entities.addGroup(Bullet.class).enableMapping();
         effectGroup = Entities.addGroup(EffectEntity.class, false);
         groundEffectGroup = Entities.addGroup(DrawTrait.class, false);
-        puddleGroup = Entities.addGroup(Puddle.class, false).enableMapping();
+        puddleGroup = Entities.addGroup(Puddle.class).enableMapping();
         itemGroup = Entities.addGroup(ItemDrop.class).enableMapping();
-        fireGroup = Entities.addGroup(Fire.class, false).enableMapping();
+        shieldGroup = Entities.addGroup(ShieldEntity.class, false);
+        fireGroup = Entities.addGroup(Fire.class).enableMapping();
         unitGroups = new EntityGroup[Team.all.length];
 
         for(Team team : Team.all){

@@ -4,7 +4,6 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.utils.Pools;
 import com.badlogic.gdx.utils.Queue;
 import io.anuke.annotations.Annotations.Loc;
 import io.anuke.annotations.Annotations.Remote;
@@ -373,7 +372,7 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
     }
 
     public void drawName(){
-        GlyphLayout layout = Pools.obtain(GlyphLayout.class);
+        GlyphLayout layout = Pooling.obtain(GlyphLayout.class, GlyphLayout::new);
 
         Draw.tscl(0.25f / 2);
         layout.setText(Core.font, name);
@@ -390,7 +389,7 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
         }
 
         Draw.reset();
-        Pools.free(layout);
+        Pooling.free(layout);
         Draw.tscl(fontScale);
     }
 
@@ -641,7 +640,7 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
 
         if(velocity.len() <= 0.2f){
             rotation += Mathf.sin(Timers.time() + id * 99, 10f, 1f);
-        }else{
+        }else if(target == null){
             rotation = Mathf.slerpDelta(rotation, velocity.angle(), velocity.len() / 10f);
         }
 

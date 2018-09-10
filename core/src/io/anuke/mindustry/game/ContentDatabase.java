@@ -16,6 +16,10 @@ public class ContentDatabase{
     private ObjectMap<ContentType, ObjectSet<String>> unlocked = new ObjectMap<>();
     /** Whether unlockables have changed since the last save.*/
     private boolean dirty;
+
+    static{
+        Settings.setSerializer(ContentType.class, (stream, t) -> stream.writeInt(t.ordinal()), stream -> ContentType.values()[stream.readInt()]);
+    }
     
     /** Returns whether or not this piece of content is unlocked yet.*/
     public boolean isUnlocked(UnlockableContent content){
@@ -68,7 +72,7 @@ public class ContentDatabase{
     }
 
     public void load(){
-        ObjectMap<ContentType, Array<String>> result = Settings.getJson("content-database", ObjectMap.class);
+        ObjectMap<ContentType, Array<String>> result = Settings.getBinary("content-database", ObjectMap.class, () -> new ObjectMap<>());
 
         for(Entry<ContentType, Array<String>> entry : result.entries()){
             ObjectSet<String> set = new ObjectSet<>();
@@ -87,7 +91,7 @@ public class ContentDatabase{
             write.put(entry.key, entry.value.iterator().toArray());
         }
 
-        Settings.putJson("content-database", write);
+        Settings.putBinary("content-database", write);
         Settings.save();
         dirty = false;
     }

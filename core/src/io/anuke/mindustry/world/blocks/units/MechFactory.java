@@ -75,6 +75,8 @@ public class MechFactory extends Block{
 
     @Remote(called = Loc.server)
     public static void onMechFactoryDone(Tile tile){
+        if(!(tile.entity instanceof MechFactoryEntity)) return;
+
         MechFactoryEntity entity = tile.entity();
 
         Effects.effect(Fx.spawn, entity);
@@ -185,9 +187,9 @@ public class MechFactory extends Block{
 
         if(entity.player != null){
             entity.heat = Mathf.lerpDelta(entity.heat, 1f, 0.1f);
-            entity.progress += 1f / buildTime;
+            entity.progress += 1f / buildTime * entity.delta();
 
-            entity.time += 0.5f;
+            entity.time += 0.5f * entity.delta();
 
             if(entity.progress >= 1f){
                 Call.onMechFactoryDone(tile);

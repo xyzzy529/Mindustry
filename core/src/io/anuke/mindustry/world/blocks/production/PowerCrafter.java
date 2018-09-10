@@ -7,7 +7,6 @@ import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.world.blocks.production.GenericCrafter.GenericCrafterEntity;
 import io.anuke.mindustry.world.meta.BlockStat;
-import io.anuke.ucore.core.Timers;
 
 public class PowerCrafter extends Block{
     protected final int timerDump = timers++;
@@ -65,8 +64,8 @@ public class PowerCrafter extends Block{
         GenericCrafterEntity entity = tile.entity();
 
         if(entity.cons.valid()){
-            entity.progress += 1f / craftTime;
-            entity.totalProgress += Timers.delta();
+            entity.progress += 1f / craftTime * entity.delta();
+            entity.totalProgress += entity.delta();
         }
 
         if(entity.progress >= 1f){

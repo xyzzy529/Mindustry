@@ -79,7 +79,7 @@ public class MassDriver extends Block{
         entity.reload = 1f;
         entity.power.amount = 0f;
 
-        DriverBulletData data = Pooling.obtain(DriverBulletData.class);
+        DriverBulletData data = Pooling.obtain(DriverBulletData.class, DriverBulletData::new);
         data.from = entity;
         data.to = other;
         for(int i = 0; i < content.items().size; i++){
@@ -92,7 +92,7 @@ public class MassDriver extends Block{
         other.isRecieving = true;
         Bullet.create(TurretBullets.driverBolt, entity, entity.getTeam(),
                 tile.drawx() + Angles.trnsx(angle, driver.translation), tile.drawy() + Angles.trnsy(angle, driver.translation),
-                angle, 1f, data);
+                angle, 1f, 1f, data);
 
         Effects.effect(driver.shootEffect, tile.drawx() + Angles.trnsx(angle, driver.translation),
                 tile.drawy() + Angles.trnsy(angle, driver.translation), angle);
@@ -146,7 +146,7 @@ public class MassDriver extends Block{
         }
 
         if(entity.reload > 0f){
-            entity.reload = Mathf.clamp(entity.reload - Timers.delta() / reloadTime);
+            entity.reload = Mathf.clamp(entity.reload - entity.delta() / reloadTime);
         }
 
         if(!entity.isRecieving){
