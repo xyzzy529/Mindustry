@@ -2,6 +2,7 @@ package io.anuke.mindustry.game;
 
 import com.badlogic.gdx.utils.Array;
 import io.anuke.mindustry.Vars;
+import io.anuke.mindustry.ai.control.AI;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.ucore.util.EnumSet;
 import io.anuke.ucore.util.ThreadArray;
@@ -57,6 +58,7 @@ public class Teams{
         public final Array<Tile> cores = new ThreadArray<>();
         public final EnumSet<Team> enemies;
         public final Team team;
+        public AI ai;
 
         public TeamData(Team team, EnumSet<Team> enemies){
             this.team = team;

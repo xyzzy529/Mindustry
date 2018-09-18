@@ -2,12 +2,14 @@ package io.anuke.mindustry.core;
 
 import com.badlogic.gdx.utils.Array;
 import io.anuke.mindustry.Vars;
+import io.anuke.mindustry.ai.control.AI;
 import io.anuke.mindustry.core.GameState.State;
 import io.anuke.mindustry.entities.TileEntity;
 import io.anuke.mindustry.game.EventType.GameOverEvent;
 import io.anuke.mindustry.game.EventType.PlayEvent;
 import io.anuke.mindustry.game.EventType.ResetEvent;
 import io.anuke.mindustry.game.EventType.WaveEvent;
+import io.anuke.mindustry.game.Team;
 import io.anuke.mindustry.game.Teams;
 import io.anuke.mindustry.net.Net;
 import io.anuke.mindustry.type.ItemStack;
@@ -63,6 +65,7 @@ public class Logic extends Module{
         state.wavetime = wavespace * state.difficulty.timeScaling;
         state.gameOver = false;
         state.teams = new Teams();
+        state.teams.get(waveTeam).ai = new AI();
 
         Timers.clear();
         Entities.clear();
@@ -108,6 +111,12 @@ public class Logic extends Module{
             }
 
             if(!state.is(State.paused) || Net.active()){
+
+                for(Team team : Team.all){
+                    if(state.teams.isActive(team) && state.teams.get(team).ai != null){
+                        state.teams.get(team).ai.update(team);
+                    }
+                }
 
                 if(!state.mode.disableWaveTimer && !state.mode.disableWaves){
                     state.wavetime -= Timers.delta();
