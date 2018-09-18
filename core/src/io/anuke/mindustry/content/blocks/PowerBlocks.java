@@ -22,7 +22,7 @@ public class PowerBlocks extends BlockList implements ContentList{
         thermalGenerator = new LiquidHeatGenerator("thermal-generator"){{
             maxLiquidGenerate = 0.5f;
             powerCapacity = 40f;
-            powerPerLiquid = 1.5f;
+            powerPerLiquid = 1f;
             generateEffect = BlockFx.redgeneratespark;
             size = 2;
         }};
@@ -38,8 +38,9 @@ public class PowerBlocks extends BlockList implements ContentList{
 
         rtgGenerator = new DecayGenerator("rtg-generator"){{
             powerCapacity = 40f;
-            powerOutput = 0.02f;
-            itemDuration = 500f;
+            size = 2;
+            powerOutput = 0.3f;
+            itemDuration = 220f;
         }};
 
         solarPanel = new SolarGenerator("solar-panel"){{

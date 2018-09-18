@@ -100,15 +100,15 @@ public class PowerSmelter extends PowerBlock{
 
         //heat it up if there's enough power
         if(entity.cons.valid()){
-            entity.heat += 1f / heatUpTime * Timers.delta();
-            if(Mathf.chance(Timers.delta() * burnEffectChance))
+            entity.heat += 1f / heatUpTime * entity.delta();
+            if(Mathf.chance(entity.delta() * burnEffectChance))
                 Effects.effect(burnEffect, entity.x + Mathf.range(size * 4f), entity.y + Mathf.range(size * 4));
         }else{
             entity.heat -= 1f / heatUpTime * Timers.delta();
         }
 
         entity.heat = Mathf.clamp(entity.heat);
-        entity.time += entity.heat * Timers.delta();
+        entity.time += entity.heat * entity.delta();
 
         if(!entity.cons.valid()){
             return;
@@ -122,11 +122,15 @@ public class PowerSmelter extends PowerBlock{
             }
         }
 
+        entity.craftTime += entity.delta();
+
         if(entity.items.get(result) >= itemCapacity //output full
                 || entity.heat <= minHeat //not burning
-                || !entity.timer.get(timerCraft, craftTime*baseSmeltSpeed)){ //not yet time
+                || entity.craftTime < craftTime*baseSmeltSpeed){ //not yet time
             return;
         }
+
+        entity.craftTime = 0f;
 
         boolean consumeInputs = true;
 
@@ -206,6 +210,7 @@ public class PowerSmelter extends PowerBlock{
     class PowerSmelterEntity extends TileEntity{
         public float heat;
         public float time;
+        public float craftTime;
 
         @Override
         public void write(DataOutputStream stream) throws IOException{

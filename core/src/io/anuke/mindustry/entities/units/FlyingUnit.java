@@ -12,10 +12,7 @@ import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.world.meta.BlockFlag;
 import io.anuke.ucore.core.Timers;
 import io.anuke.ucore.graphics.Draw;
-import io.anuke.ucore.util.Angles;
-import io.anuke.ucore.util.Geometry;
-import io.anuke.ucore.util.Mathf;
-import io.anuke.ucore.util.Translator;
+import io.anuke.ucore.util.*;
 
 import static io.anuke.mindustry.Vars.world;
 
@@ -83,6 +80,11 @@ public abstract class FlyingUnit extends BaseUnit implements CarryTrait{
             }
         }
     },
+    patrol = new UnitState(){
+        public void update(){
+            //TODO
+        }
+    },
     retreat = new UnitState(){
         public void entered(){
             target = null;
@@ -110,8 +112,9 @@ public abstract class FlyingUnit extends BaseUnit implements CarryTrait{
     @Override
     public void onCommand(UnitCommand command){
         state.set(command == UnitCommand.retreat ? retreat :
-                 (command == UnitCommand.attack ? attack :
-                 (null)));
+                (command == UnitCommand.attack ? attack :
+                (command == UnitCommand.patrol ? patrol :
+                (null))));
     }
 
     @Override
@@ -133,11 +136,13 @@ public abstract class FlyingUnit extends BaseUnit implements CarryTrait{
     public void update(){
         super.update();
 
-        updateRotation();
+        if(!Net.client()){
+            updateRotation();
+            wobble();
+        }
+
         trail.update(x + Angles.trnsx(rotation + 180f, 6f) + Mathf.range(wobblyness),
         y + Angles.trnsy(rotation + 180f, 6f) + Mathf.range(wobblyness));
-
-        wobble();
     }
 
     @Override
@@ -182,11 +187,11 @@ public abstract class FlyingUnit extends BaseUnit implements CarryTrait{
     protected void wobble(){
         if(Net.client()) return;
 
-        x += Mathf.sin(Timers.time() + id * 999, 25f, 0.07f);
-        y += Mathf.cos(Timers.time() + id * 999, 25f, 0.07f);
+        x += Mathf.sin(Timers.time() + id * 999, 25f, 0.08f)*Timers.delta();
+        y += Mathf.cos(Timers.time() + id * 999, 25f, 0.08f)*Timers.delta();
 
-        if(velocity.len() <= 0.2f){
-            rotation += Mathf.sin(Timers.time() + id * 99, 10f, 8f);
+        if(velocity.len() <= 0.05f){
+            rotation += Mathf.sin(Timers.time() + id * 99, 10f, 2.5f)*Timers.delta();
         }
     }
 

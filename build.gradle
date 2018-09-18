@@ -27,7 +27,7 @@ allprojects {
         appName = 'Mindustry'
         gdxVersion = '1.9.8'
         roboVMVersion = '2.3.0'
-        uCoreVersion = '33a2bc650be42394821acad06aceb6f9ba74e77a'
+        uCoreVersion = '99b7a3af00a1fa7e48a494515bf6b137774e114b'
 
         getVersionString = {
             String buildVersion = getBuildVersion()
@@ -44,14 +44,13 @@ allprojects {
         }
 
         generateLocales = {
-            def output = '["en",'
+            def output = 'en\n'
             def bundles = new File(project(':core').projectDir, 'assets/bundles/')
             bundles.listFiles().each { other ->
                 if(other.name == "bundle.properties") return;
-                output += '"' + other.name.substring("bundle".length() + 1, other.name.lastIndexOf('.')) + '",'
+                output += other.name.substring("bundle".length() + 1, other.name.lastIndexOf('.')) + "\n"
             }
-            output = (output.substring(0, output.size() - 1) + "]")
-            new File(project(':core').projectDir, 'assets/locales.json').text = output;
+            new File(project(':core').projectDir, 'assets/locales').text = output;
         }
 
         writeVersion = {
@@ -93,6 +92,8 @@ project(":desktop") {
     dependencies {
         compile project(":core")
         compile project(":kryonet")
+        if(new File(projectDir.parent, '../debug').exists()) compile project(":debug")
+
         compile "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
         compile "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
         compile "com.badlogicgames.gdx:gdx-controllers-lwjgl3:$gdxVersion"
@@ -118,9 +119,6 @@ project(":html") {
         compile "com.badlogicgames.gdx:gdx-controllers-gwt:$gdxVersion:sources"
     }
 
-    compileJava.options.compilerArgs = [
-        "-processor", "io.anuke.annotations.RemoteMethodAnnotationProcessor"
-    ]
 }
 
 project(":ios") {
@@ -185,7 +183,7 @@ project(":core") {
     }
 
     compileJava.options.compilerArgs = [
-        "-processor", "io.anuke.annotations.RemoteMethodAnnotationProcessor"
+        "-processor", "io.anuke.annotations.RemoteMethodAnnotationProcessor,io.anuke.annotations.SerializeAnnotationProcessor"
     ]
 }
 
@@ -229,7 +227,8 @@ project(":kryonet") {
 
     dependencies {
         compile project(":core")
-        compile 'com.github.crykn:kryonet:2.22.1'
+        compile "org.lz4:lz4-java:1.4.1"
+        compile 'com.github.Anuken:kryonet:53b10247b1'
         compile 'com.github.Anuken:WaifUPnP:05eb46bc577fd7674596946ba288c96c0cedd893'
     }
 }

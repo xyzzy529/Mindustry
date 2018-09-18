@@ -9,17 +9,19 @@ import io.anuke.mindustry.type.ContentType;
 import io.anuke.ucore.core.Events;
 import io.anuke.ucore.core.Settings;
 
-import static io.anuke.mindustry.Vars.debug;
-
 public class ContentDatabase{
     /** Maps unlockable type names to a set of unlocked content.*/
     private ObjectMap<ContentType, ObjectSet<String>> unlocked = new ObjectMap<>();
     /** Whether unlockables have changed since the last save.*/
     private boolean dirty;
+
+    static{
+        Settings.setSerializer(ContentType.class, (stream, t) -> stream.writeInt(t.ordinal()), stream -> ContentType.values()[stream.readInt()]);
+    }
     
     /** Returns whether or not this piece of content is unlocked yet.*/
     public boolean isUnlocked(UnlockableContent content){
-        if(debug) return true;
+        if(content.alwaysUnlocked()) return true;
 
         if(!unlocked.containsKey(content.getContentType())){
             unlocked.put(content.getContentType(), new ObjectSet<>());
@@ -68,7 +70,7 @@ public class ContentDatabase{
     }
 
     public void load(){
-        ObjectMap<ContentType, Array<String>> result = Settings.getJson("content-database", ObjectMap.class);
+        ObjectMap<ContentType, Array<String>> result = Settings.getBinary("content-database", ObjectMap.class, () -> new ObjectMap<>());
 
         for(Entry<ContentType, Array<String>> entry : result.entries()){
             ObjectSet<String> set = new ObjectSet<>();
@@ -87,7 +89,7 @@ public class ContentDatabase{
             write.put(entry.key, entry.value.iterator().toArray());
         }
 
-        Settings.putJson("content-database", write);
+        Settings.putBinary("content-database", write);
         Settings.save();
         dirty = false;
     }

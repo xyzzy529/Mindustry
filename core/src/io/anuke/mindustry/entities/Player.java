@@ -4,14 +4,12 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.utils.Pools;
 import com.badlogic.gdx.utils.Queue;
 import io.anuke.annotations.Annotations.Loc;
 import io.anuke.annotations.Annotations.Remote;
 import io.anuke.mindustry.Vars;
 import io.anuke.mindustry.content.Mechs;
 import io.anuke.mindustry.content.fx.UnitFx;
-import io.anuke.mindustry.entities.effect.ItemDrop;
 import io.anuke.mindustry.entities.effect.ScorchDecal;
 import io.anuke.mindustry.entities.traits.*;
 import io.anuke.mindustry.game.Team;
@@ -101,6 +99,11 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
 
         ScorchDecal.create(player.x, player.y);
         player.onDeath();
+    }
+
+    @Override
+    public float getDrag(){
+        return mech.drag;
     }
 
     @Override
@@ -219,11 +222,6 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
     }
 
     @Override
-    public boolean collides(SolidTrait other){
-        return super.collides(other) || other instanceof ItemDrop;
-    }
-
-    @Override
     public void set(float x, float y){
         this.x = x;
         this.y = y;
@@ -267,7 +265,7 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
 
     @Override
     public void draw(){
-        if((debug && (!showPlayer || !showUI)) || dead) return;
+        if(dead) return;
 
         float x = snappedX(), y = snappedY();
 
@@ -373,7 +371,7 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
     }
 
     public void drawName(){
-        GlyphLayout layout = Pools.obtain(GlyphLayout.class);
+        GlyphLayout layout = Pooling.obtain(GlyphLayout.class, GlyphLayout::new);
 
         Draw.tscl(0.25f / 2);
         layout.setText(Core.font, name);
@@ -390,7 +388,7 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
         }
 
         Draw.reset();
-        Pools.free(layout);
+        Pooling.free(layout);
         Draw.tscl(fontScale);
     }
 
@@ -431,6 +429,8 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
     //endregion
 
     //region update methods
+
+    float lastx, lasty;
 
     @Override
     public void update(){
@@ -519,7 +519,7 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
             isBoosting = true;
         }
 
-        float speed = isBoosting && !mech.flying ? debug ? 5f : mech.boostSpeed : mech.speed;
+        float speed = isBoosting && !mech.flying ? mech.boostSpeed : mech.speed;
         //fraction of speed when at max load
         float carrySlowdown = 0.7f;
 
@@ -571,7 +571,7 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
                 velocity.add(movement);
             }
             float prex = x, prey = y;
-            updateVelocityStatus(mech.drag, debug ? 10f : mech.maxSpeed);
+            updateVelocityStatus(mech.drag, mech.maxSpeed);
             moved = distanceTo(prex, prey) > 0.01f;
         }else{
             velocity.setZero();
@@ -641,7 +641,7 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
 
         if(velocity.len() <= 0.2f){
             rotation += Mathf.sin(Timers.time() + id * 99, 10f, 1f);
-        }else{
+        }else if(target == null){
             rotation = Mathf.slerpDelta(rotation, velocity.angle(), velocity.len() / 10f);
         }
 

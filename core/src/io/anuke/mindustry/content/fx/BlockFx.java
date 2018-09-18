@@ -19,7 +19,8 @@ public class BlockFx extends FxList implements ContentList{
     public static Effect reactorsmoke, nuclearsmoke, nuclearcloud, redgeneratespark, generatespark, fuelburn, plasticburn,
     pulverize, pulverizeRed, pulverizeRedder, pulverizeSmall, pulverizeMedium, producesmoke, smeltsmoke, formsmoke, blastsmoke,
     lava, dooropen, doorclose, dooropenlarge, doorcloselarge, purify, purifyoil, purifystone, generate, mine, mineBig, mineHuge,
-    smelt, teleportActivate, teleport, teleportOut, ripple, bubble, commandSend, healBlock, healBlockFull, healWaveMend, overdriveWave;
+    smelt, teleportActivate, teleport, teleportOut, ripple, bubble, commandSend, healBlock, healBlockFull, healWaveMend, overdriveWave,
+    overdriveBlockFull, shieldBreak;
 
     @Override
     public void load(){
@@ -83,56 +84,56 @@ public class BlockFx extends FxList implements ContentList{
         pulverize = new Effect(40, e -> {
             Angles.randLenVectors(e.id, 5, 3f + e.fin() * 8f, (x, y) -> {
                 Draw.color(Palette.stoneGray);
-                Fill.poly(e.x + x, e.y + y, 4, e.fout() * 2f + 0.5f, 45);
+                Fill.square(e.x + x, e.y + y, e.fout() * 2f + 0.5f, 45);
                 Draw.reset();
             });
         });
         pulverizeRed = new Effect(40, e -> {
             Angles.randLenVectors(e.id, 5, 3f + e.fin() * 8f, (x, y) -> {
                 Draw.color(Palette.redDust, Palette.stoneGray, e.fin());
-                Fill.poly(e.x + x, e.y + y, 4, e.fout() * 2f + 0.5f, 45);
+                Fill.square(e.x + x, e.y + y, e.fout() * 2f + 0.5f, 45);
                 Draw.reset();
             });
         });
         pulverizeRedder = new Effect(40, e -> {
             Angles.randLenVectors(e.id, 5, 3f + e.fin() * 9f, (x, y) -> {
                 Draw.color(Palette.redderDust, Palette.stoneGray, e.fin());
-                Fill.poly(e.x + x, e.y + y, 4, e.fout() * 2.5f + 0.5f, 45);
+                Fill.square(e.x + x, e.y + y, e.fout() * 2.5f + 0.5f, 45);
                 Draw.reset();
             });
         });
         pulverizeSmall = new Effect(30, e -> {
             Angles.randLenVectors(e.id, 3, e.fin() * 5f, (x, y) -> {
                 Draw.color(Palette.stoneGray);
-                Fill.poly(e.x + x, e.y + y, 4, e.fout() * 1f + 0.5f, 45);
+                Fill.square(e.x + x, e.y + y, e.fout() * 1f + 0.5f, 45);
                 Draw.reset();
             });
         });
         pulverizeMedium = new Effect(30, e -> {
             Angles.randLenVectors(e.id, 5, 3f + e.fin() * 8f, (x, y) -> {
                 Draw.color(Palette.stoneGray);
-                Fill.poly(e.x + x, e.y + y, 4, e.fout() * 1f + 0.5f, 45);
+                Fill.square(e.x + x, e.y + y, e.fout() * 1f + 0.5f, 45);
                 Draw.reset();
             });
         });
         producesmoke = new Effect(12, e -> {
             Angles.randLenVectors(e.id, 8, 4f + e.fin() * 18f, (x, y) -> {
                 Draw.color(Color.WHITE, Palette.accent, e.fin());
-                Fill.poly(e.x + x, e.y + y, 4, 1f + e.fout() * 3f, 45);
+                Fill.square(e.x + x, e.y + y, 1f + e.fout() * 3f, 45);
                 Draw.reset();
             });
         });
         smeltsmoke = new Effect(15, e -> {
             Angles.randLenVectors(e.id, 6, 4f + e.fin() * 5f, (x, y) -> {
                 Draw.color(Color.WHITE, e.color, e.fin());
-                Fill.poly(e.x + x, e.y + y, 4, 0.5f + e.fout() * 2f, 45);
+                Fill.square(e.x + x, e.y + y, 0.5f + e.fout() * 2f, 45);
                 Draw.reset();
             });
         });
         formsmoke = new Effect(40, e -> {
             Angles.randLenVectors(e.id, 6, 5f + e.fin() * 8f, (x, y) -> {
                 Draw.color(Palette.plasticSmoke, Color.LIGHT_GRAY, e.fin());
-                Fill.poly(e.x + x, e.y + y, 4, 0.2f + e.fout() * 2f, 45);
+                Fill.square(e.x + x, e.y + y, 0.2f + e.fout() * 2f, 45);
                 Draw.reset();
             });
         });
@@ -199,28 +200,28 @@ public class BlockFx extends FxList implements ContentList{
         mine = new Effect(20, e -> {
             Angles.randLenVectors(e.id, 6, 3f + e.fin() * 6f, (x, y) -> {
                 Draw.color(e.color, Color.LIGHT_GRAY, e.fin());
-                Fill.poly(e.x + x, e.y + y, 4, e.fout() * 2f, 45);
+                Fill.square(e.x + x, e.y + y, e.fout() * 2f, 45);
                 Draw.reset();
             });
         });
         mineBig = new Effect(30, e -> {
             Angles.randLenVectors(e.id, 6, 4f + e.fin() * 8f, (x, y) -> {
                 Draw.color(e.color, Color.LIGHT_GRAY, e.fin());
-                Fill.poly(e.x + x, e.y + y, 4, e.fout() * 2f + 0.2f, 45);
+                Fill.square(e.x + x, e.y + y, e.fout() * 2f + 0.2f, 45);
                 Draw.reset();
             });
         });
         mineHuge = new Effect(40, e -> {
             Angles.randLenVectors(e.id, 8, 5f + e.fin() * 10f, (x, y) -> {
                 Draw.color(e.color, Color.LIGHT_GRAY, e.fin());
-                Fill.poly(e.x + x, e.y + y, 4, e.fout() * 2f + 0.5f, 45);
+                Fill.square(e.x + x, e.y + y, e.fout() * 2f + 0.5f, 45);
                 Draw.reset();
             });
         });
         smelt = new Effect(20, e -> {
             Angles.randLenVectors(e.id, 6, 2f + e.fin() * 5f, (x, y) -> {
                 Draw.color(Color.WHITE, e.color, e.fin());
-                Fill.poly(e.x + x, e.y + y, 4, 0.5f + e.fout() * 2f, 45);
+                Fill.square(e.x + x, e.y + y, 0.5f + e.fout() * 2f, 45);
                 Draw.reset();
             });
         });
@@ -311,6 +312,20 @@ public class BlockFx extends FxList implements ContentList{
             Draw.alpha(e.fout());
             Fill.square(e.x, e.y, e.rotation * tilesize);
             Draw.color();
+        });
+
+        overdriveBlockFull = new Effect(60, e -> {
+            Draw.color(e.color);
+            Draw.alpha(e.fslope() * 0.4f);
+            Fill.square(e.x, e.y, e.rotation * tilesize);
+            Draw.color();
+        });
+
+        shieldBreak = new Effect(40, e -> {
+            Draw.color(Color.WHITE);
+            Lines.stroke(3f * e.fout());
+            Lines.poly(e.x, e.y, 6, e.rotation, 90);
+            Draw.reset();
         });
     }
 }

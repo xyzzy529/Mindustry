@@ -20,7 +20,6 @@ import io.anuke.mindustry.net.Packets.KickReason;
 import io.anuke.mindustry.net.TraceInfo;
 import io.anuke.mindustry.type.Item;
 import io.anuke.mindustry.type.ItemType;
-import io.anuke.mindustry.ui.fragments.DebugFragment;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.ucore.core.*;
 import io.anuke.ucore.modules.Module;
@@ -335,10 +334,10 @@ public class ServerControl extends Module{
             info("Crash reporting is now {0}.", value ? "on" : "off");
         });
 
-        handler.register("debug", "<on/off>", "Disables or enables debug mode", arg -> {
+        handler.register("strict", "<on/off>", "Disables or enables strict mode", arg -> {
            boolean value = arg[0].equalsIgnoreCase("on");
-           debug = value;
-           info("Debug mode is now {0}.", value ? "on" : "off");
+           netServer.admins.setStrict(value);
+           info("Strict mode is now {0}.", netServer.admins.getStrict() ? "on" : "off");
         });
 
         handler.register("allow-custom-clients", "[on/off]", "Allow or disallow custom clients.", arg -> {
@@ -645,10 +644,6 @@ public class ServerControl extends Module{
             Events.fire(new GameOverEvent());
         });
 
-        handler.register("debuginfo", "Print debug info", arg -> {
-            info(DebugFragment.debugInfo());
-        });
-
         handler.register("traceblock", "<x> <y>", "Prints debug info about a block", arg -> {
             try{
                 int x = Integer.parseInt(arg[0]);
@@ -903,7 +898,7 @@ public class ServerControl extends Module{
             checkPvPGameOver();
         }
 
-        if(state.is(State.playing) && world.getSector() != null && !inExtraRound && !debug){
+        if(state.is(State.playing) && world.getSector() != null && !inExtraRound && netServer.admins.getStrict()){
             //all assigned missions are complete
             if(world.getSector().completedMissions >= world.getSector().missions.size){
                 Log.info("Mission complete.");

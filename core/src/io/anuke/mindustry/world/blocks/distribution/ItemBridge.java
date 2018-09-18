@@ -81,7 +81,7 @@ public class ItemBridge extends Block{
     }
 
     @Override
-    public void placed(Tile tile){
+    public void playerPlaced(Tile tile){
         Tile last = world.tile(lastPlaced);
         if(linkValid(tile, last)){
             ItemBridgeEntity entity = last.entity();
@@ -152,8 +152,8 @@ public class ItemBridge extends Block{
     public void update(Tile tile){
         ItemBridgeEntity entity = tile.entity();
 
-        entity.time += entity.cycleSpeed * Timers.delta();
-        entity.time2 += (entity.cycleSpeed - 1f) * Timers.delta();
+        entity.time += entity.cycleSpeed * entity.delta();
+        entity.time2 += (entity.cycleSpeed - 1f) * entity.delta();
 
         removals.clear();
 

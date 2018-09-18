@@ -20,8 +20,12 @@ import io.anuke.mindustry.entities.units.BaseUnit;
 import io.anuke.mindustry.game.Team;
 import io.anuke.mindustry.graphics.*;
 import io.anuke.mindustry.world.Tile;
+import io.anuke.mindustry.world.blocks.defense.ForceProjector.ShieldEntity;
 import io.anuke.mindustry.world.meta.BlockFlag;
-import io.anuke.ucore.core.*;
+import io.anuke.ucore.core.Core;
+import io.anuke.ucore.core.Effects;
+import io.anuke.ucore.core.Graphics;
+import io.anuke.ucore.core.Settings;
 import io.anuke.ucore.entities.EntityDraw;
 import io.anuke.ucore.entities.EntityGroup;
 import io.anuke.ucore.entities.impl.EffectEntity;
@@ -78,7 +82,7 @@ public class Renderer extends RendererModule{
                 if(view.overlaps(pos)){
 
                     if(!(effect instanceof GroundEffect)){
-                        EffectEntity entity = Pooling.obtain(EffectEntity.class);
+                        EffectEntity entity = Pooling.obtain(EffectEntity.class, EffectEntity::new);
                         entity.effect = effect;
                         entity.color = color;
                         entity.rotation = rotation;
@@ -90,7 +94,7 @@ public class Renderer extends RendererModule{
                         }
                         threads.runGraphics(() -> effectGroup.add(entity));
                     }else{
-                        GroundEffectEntity entity = Pooling.obtain(GroundEffectEntity.class);
+                        GroundEffectEntity entity = Pooling.obtain(GroundEffectEntity.class, GroundEffectEntity::new);
                         entity.effect = effect;
                         entity.color = color;
                         entity.rotation = rotation;
@@ -186,7 +190,7 @@ public class Renderer extends RendererModule{
             camera.position.set(lastx - deltax, lasty - deltay, 0);
         }
 
-        if(debug && !ui.chatfrag.chatOpen()){
+        if(!ui.chatfrag.chatOpen()){
             renderer.record(); //this only does something if GdxGifRecorder is on the class path, which it usually isn't
         }
     }
@@ -242,17 +246,6 @@ public class Renderer extends RendererModule{
 
         blocks.drawBlocks(Layer.overlay);
 
-        if(itemGroup.size() > 0){
-            Graphics.surface(effectSurface);
-            drawAndInterpolate(itemGroup);
-            Graphics.surface();
-
-            Draw.color(0, 0, 0, 0.2f);
-            Draw.rect(effectSurface, -1, -1);
-            Draw.color();
-            Draw.rect(effectSurface, 0, 0);
-        }
-
         drawAllTeams(false);
 
         blocks.skipLayer(Layer.turret);
@@ -269,7 +262,12 @@ public class Renderer extends RendererModule{
         drawAndInterpolate(playerGroup, p -> true, Player::drawBuildRequests);
         overlays.drawTop();
 
-        if(showPaths && debug) drawDebug();
+        Shaders.shield.color.set(Palette.accent);
+
+        Graphics.beginShaders(Shaders.shield);
+        EntityDraw.draw(shieldGroup);
+        EntityDraw.drawWith(shieldGroup, shield -> true, shield -> ((ShieldEntity)shield).drawOver());
+        Graphics.endShaders();
 
         Graphics.flushSurface();
 
@@ -292,10 +290,6 @@ public class Renderer extends RendererModule{
 
         float trnsX = -12, trnsY = -13;
 
-        //Graphics.end();
-        //Core.batch.getTransformMatrix().translate(trnsX, trnsY, 0);
-        //Graphics.begin();
-
         for(EntityGroup<? extends BaseUnit> group : unitGroups){
             if(!group.isEmpty()){
                 drawAndInterpolate(group, unit -> unit.isFlying() && !unit.isDead(), baseUnit -> baseUnit.drawShadow(trnsX, trnsY));
@@ -306,11 +300,6 @@ public class Renderer extends RendererModule{
             drawAndInterpolate(playerGroup, unit -> unit.isFlying() && !unit.isDead(), player -> player.drawShadow(trnsX, trnsY));
         }
 
-        //Graphics.end();
-        //Core.batch.getTransformMatrix().translate(-trnsX, -trnsY, 0);
-        //Graphics.begin();
-
-        //TODO this actually isn't necessary
         Draw.color(0, 0, 0, 0.15f);
         Graphics.flushSurface();
         Draw.color();

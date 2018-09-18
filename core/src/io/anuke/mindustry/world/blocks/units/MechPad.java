@@ -34,13 +34,13 @@ import java.io.IOException;
 import static io.anuke.mindustry.Vars.mobile;
 import static io.anuke.mindustry.Vars.tilesize;
 
-public class MechFactory extends Block{
+public class MechPad extends Block{
     protected Mech mech;
     protected float buildTime = 60 * 5;
 
     protected TextureRegion openRegion;
 
-    public MechFactory(String name){
+    public MechPad(String name){
         super(name);
         update = true;
         solidifes = true;
@@ -75,13 +75,15 @@ public class MechFactory extends Block{
 
     @Remote(called = Loc.server)
     public static void onMechFactoryDone(Tile tile){
+        if(!(tile.entity instanceof MechFactoryEntity)) return;
+
         MechFactoryEntity entity = tile.entity();
 
         Effects.effect(Fx.spawn, entity);
 
         if(entity.player == null) return;
 
-        Mech result = ((MechFactory) tile.block()).mech;
+        Mech result = ((MechPad) tile.block()).mech;
 
         if(entity.player.mech == result){
             entity.player.mech = (entity.player.isMobile ? Mechs.starterMobile : Mechs.starterDesktop);
@@ -185,9 +187,9 @@ public class MechFactory extends Block{
 
         if(entity.player != null){
             entity.heat = Mathf.lerpDelta(entity.heat, 1f, 0.1f);
-            entity.progress += 1f / buildTime;
+            entity.progress += 1f / buildTime * entity.delta();
 
-            entity.time += 0.5f;
+            entity.time += 0.5f * entity.delta();
 
             if(entity.progress >= 1f){
                 Call.onMechFactoryDone(tile);

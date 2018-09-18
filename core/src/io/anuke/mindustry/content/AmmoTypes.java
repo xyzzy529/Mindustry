@@ -10,12 +10,13 @@ import io.anuke.mindustry.type.ContentType;
 
 public class AmmoTypes implements ContentList{
     public static AmmoType bulletCopper, bulletDense, bulletThorium, bulletSilicon, bulletPyratite,
+    bulletDenseBig, bulletPyratiteBig, bulletThoriumBig,
     shock, bombExplosive, bombIncendiary, bombOil, shellCarbide, flamerThermite, weaponMissile, weaponMissileSwarm, bulletMech,
             healBlaster, bulletGlaive,
             flakExplosive, flakPlastic, flakSurge,
             missileExplosive, missileIncindiary, missileSurge,
             artilleryDense, artilleryPlastic, artilleryHoming, artilleryIncindiary, artilleryExplosive,
-            basicFlame, lancerLaser, lightning, spectreLaser, meltdownLaser, fuseShotgun, oil, water, lava, cryofluid;
+            basicFlame, lancerLaser, lightning, spectreLaser, meltdownLaser, fuseShotgun, oil, water, lava, cryofluid, arc;
 
     @Override
     public void load(){
@@ -115,6 +116,22 @@ public class AmmoTypes implements ContentList{
             inaccuracy = 3f;
         }};
 
+        bulletDenseBig = new AmmoType(Items.densealloy, StandardBullets.denseBig, 1){{
+            shootEffect = ShootFx.shootBig;
+            smokeEffect = ShootFx.shootBigSmoke;
+        }};
+
+        bulletThoriumBig = new AmmoType(Items.thorium, StandardBullets.thoriumBig, 1){{
+            shootEffect = ShootFx.shootBig;
+            smokeEffect = ShootFx.shootBigSmoke;
+        }};
+
+        bulletPyratiteBig = new AmmoType(Items.pyratite, StandardBullets.tracerBig, 2){{
+            shootEffect = ShootFx.shootBig;
+            smokeEffect = ShootFx.shootBigSmoke;
+            inaccuracy = 3f;
+        }};
+
         //flak
 
         flakExplosive = new AmmoType(Items.blastCompound, FlakBullets.explosive, 5){{
@@ -196,9 +213,11 @@ public class AmmoTypes implements ContentList{
 
         lightning = new AmmoType(TurretBullets.lightning);
 
+        arc = new AmmoType(TurretBullets.arc);
+
         spectreLaser = new AmmoType(TurretBullets.lancerLaser);
 
-        meltdownLaser = new AmmoType(TurretBullets.lancerLaser);
+        meltdownLaser = new AmmoType(TurretBullets.meltdownLaser);
 
         fuseShotgun = new AmmoType(Items.densealloy, TurretBullets.fuseShot, 1f){{
             shootEffect = Fx.none;

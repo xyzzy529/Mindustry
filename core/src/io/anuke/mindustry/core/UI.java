@@ -39,7 +39,6 @@ public class UI extends SceneModule{
     public final PlayerListFragment listfrag = new PlayerListFragment();
     public final BackgroundFragment backfrag = new BackgroundFragment();
     public final LoadingFragment loadfrag = new LoadingFragment();
-    public final DebugFragment debugfrag = new DebugFragment();
 
     public AboutDialog about;
     public RestartDialog restart;
@@ -118,13 +117,11 @@ public class UI extends SceneModule{
             font.getData().setScale(Vars.fontScale);
             font.getData().down += Unit.dp.scl(4f);
             font.getData().lineHeight -= Unit.dp.scl(4.3f);
-        }, skin.font(), skin.getFont("default-font-chat"), skin.getFont("korean"), skin.getFont("trad-chinese"), skin.getFont("simp-chinese"));
+        }, skin.font(), skin.getFont("default-font-chat"), skin.getFont("trad-chinese"), skin.getFont("simp-chinese"));
     }
 
     @Override
     public synchronized void update(){
-        if(Vars.debug && !Vars.showUI) return;
-
         if(Graphics.drawing()) Graphics.end();
 
         act();
@@ -179,7 +176,6 @@ public class UI extends SceneModule{
         menufrag.build(group);
         chatfrag.container().build(group);
         listfrag.build(group);
-        debugfrag.build(group);
         loadfrag.build(group);
 
     }

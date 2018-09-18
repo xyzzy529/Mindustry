@@ -109,7 +109,7 @@ public class Build{
     public static boolean validPlace(Team team, int x, int y, Block type, int rotation){
         Recipe recipe = Recipe.getByResult(type);
 
-        if(recipe == null || (recipe.debugOnly && !debug)){
+        if(recipe == null || (recipe.mode != null && recipe.mode != state.mode)){
             return false;
         }
 
@@ -213,8 +213,8 @@ public class Build{
     /**Returns whether the tile at this position is breakable by this team*/
     public static boolean validBreak(Team team, int x, int y){
         Tile tile = world.tile(x, y);
+        if(tile != null) tile = tile.target();
 
-        return tile != null && !tile.block().unbreakable
-                && (!tile.isLinked() || !tile.getLinked().block().unbreakable) && tile.breakable() && (tile.getTeam() == Team.none || tile.getTeam() == team);
+        return tile != null && tile.block().canBreak(tile) && tile.breakable() && (tile.getTeam() == Team.none || tile.getTeam() == team);
     }
 }

@@ -13,7 +13,6 @@ import io.anuke.mindustry.entities.TileEntity;
 import io.anuke.mindustry.game.Content;
 import io.anuke.mindustry.game.ContentDatabase;
 import io.anuke.mindustry.game.EventType.*;
-import io.anuke.mindustry.game.GameMode;
 import io.anuke.mindustry.game.Saves;
 import io.anuke.mindustry.input.DefaultKeybinds;
 import io.anuke.mindustry.input.DesktopInput;
@@ -21,6 +20,7 @@ import io.anuke.mindustry.input.InputHandler;
 import io.anuke.mindustry.input.MobileInput;
 import io.anuke.mindustry.maps.Map;
 import io.anuke.mindustry.net.Net;
+import io.anuke.mindustry.type.ItemStack;
 import io.anuke.mindustry.type.Recipe;
 import io.anuke.mindustry.ui.dialogs.FloatingDialog;
 import io.anuke.ucore.core.*;
@@ -51,6 +51,7 @@ public class Control extends Module{
     private Throwable error;
 
     public Control(){
+
         saves = new Saves();
         db = new ContentDatabase();
 
@@ -109,9 +110,9 @@ public class Control extends Module{
 
             state.set(State.playing);
 
-            if(state.mode == GameMode.sandbox && !Settings.getBool("sandbox-warning", false)){
-                threads.runGraphics(() -> ui.showInfo("$mode.sandbox.warning"));
-                Settings.putBool("sandbox-warning", true);
+            if(world.getSector() == null && !Settings.getBool("custom-warning", false)){
+                threads.runGraphics(() -> ui.showInfo("$mode.custom.warning"));
+                Settings.putBool("custom-warning", true);
                 Settings.save();
             }
         });
@@ -270,9 +271,14 @@ public class Control extends Module{
             control.database().unlockContent(players[0].inventory.getItem().item);
         }
 
+        outer:
         for(int i = 0; i < content.recipes().size; i ++){
             Recipe recipe = content.recipes().get(i);
-            if(!recipe.debugOnly && recipe.requirements != null && entity.items.has(recipe.requirements, 1.4f)){
+            if(!recipe.hidden && recipe.requirements != null){
+                for(ItemStack stack : recipe.requirements){
+                    if(!entity.items.has(stack.item, Math.min((int) (stack.amount * unlockResourceScaling), 2000))) continue outer;
+                }
+
                 if(control.database().unlockContent(recipe)){
                     ui.hudfrag.showUnlock(recipe);
                 }
@@ -350,10 +356,6 @@ public class Control extends Module{
             throw new RuntimeException(error);
         }
 
-        if(debug && Inputs.keyTap(io.anuke.ucore.input.Input.GRAVE)){
-            console = !console;
-        }
-
         saves.update();
 
         triggerUpdateInput();
@@ -387,11 +389,11 @@ public class Control extends Module{
             }
 
             //check unlocks every 2 seconds
-            if(!state.mode.infiniteResources && Timers.get("timerCheckUnlock", 120)){
+            if(world.getSector() != null && Timers.get("timerCheckUnlock", 120)){
                 checkUnlockableBlocks();
 
-                //save if the db changed, but don't save in debug
-                if(db.isDirty() && !debug){
+                //save if the db changed
+                if(db.isDirty()){
                     db.save();
                 }
             }
