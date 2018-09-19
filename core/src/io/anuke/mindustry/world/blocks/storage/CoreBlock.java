@@ -1,6 +1,7 @@
 package io.anuke.mindustry.world.blocks.storage;
 
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.utils.Array;
 import io.anuke.annotations.Annotations.Loc;
 import io.anuke.annotations.Annotations.Remote;
 import io.anuke.mindustry.Vars;
@@ -206,14 +207,12 @@ public class CoreBlock extends StorageBlock{
         }else{
             entity.warmup += Timers.delta();
 
-            if(entity.solid && entity.warmup > 60f && unitGroups[tile.getTeamID()].getByID(entity.droneID) == null && !Net.client()){
+            if(entity.solid && entity.warmup > 60f && !Net.client()){
 
                 boolean found = false;
                 for(BaseUnit unit : unitGroups[tile.getTeamID()].all()){
-                    if(unit.getType().id == droneType.id){
-                        entity.droneID = unit.id;
-                        found = true;
-                        break;
+                    if(unit.getSpawner() == tile){
+                        entity.drones.add(unit);
                     }
                 }
 
@@ -240,8 +239,7 @@ public class CoreBlock extends StorageBlock{
 
     public class CoreEntity extends TileEntity implements SpawnerTrait{
         public Unit currentUnit;
-        public float shieldHeat;
-        int droneID = -1;
+        Array<Unit> drones;
         boolean solid = true;
         float warmup;
         float progress;
@@ -265,13 +263,11 @@ public class CoreBlock extends StorageBlock{
         @Override
         public void write(DataOutputStream stream) throws IOException{
             stream.writeBoolean(solid);
-            stream.writeInt(droneID);
         }
 
         @Override
         public void read(DataInputStream stream) throws IOException{
             solid = stream.readBoolean();
-            droneID = stream.readInt();
         }
     }
 }
