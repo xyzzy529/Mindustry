@@ -41,6 +41,7 @@ import static io.anuke.mindustry.Vars.unitGroups;
 public class CoreBlock extends StorageBlock{
     protected float droneRespawnDuration = 60 * 6;
     protected UnitType droneType = UnitTypes.spirit;
+    protected int maxDrones = 1;
 
     protected TextureRegion openRegion;
     protected TextureRegion topRegion;
@@ -209,22 +210,22 @@ public class CoreBlock extends StorageBlock{
 
             if(entity.solid && entity.warmup > 60f && !Net.client()){
 
-                boolean found = false;
                 for(BaseUnit unit : unitGroups[tile.getTeamID()].all()){
                     if(unit.getSpawner() == tile){
                         entity.drones.add(unit);
                     }
                 }
 
-                if(!found){
+                int maxDrones = tile.isEnemyCheat() ? this.maxDrones : 1;
+
+                if(entity.drones.size < maxDrones){
                     BaseUnit unit = droneType.create(tile.getTeam());
                     unit.setSpawner(tile);
                     unit.setDead(true);
                     unit.add();
+                    entity.drones.add(unit);
 
                     useContent(droneType);
-
-                    entity.droneID = unit.id;
                 }
             }
 
