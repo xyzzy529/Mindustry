@@ -46,9 +46,7 @@ public class MobileInput extends InputHandler implements GestureListener{
     private final float edgePan = io.anuke.ucore.scene.ui.layout.Unit.dp.scl(60f);
 
     //gesture data
-    private Vector2 pinch1 = new Vector2(-1, -1), pinch2 = pinch1.cpy();
     private Vector2 vector = new Vector2();
-    private float initzoom = -1;
     private boolean zoomed = false;
     /** Set of completed guides. */
     private ObjectSet<String> guides = new ObjectSet<>();
@@ -564,17 +562,24 @@ public class MobileInput extends InputHandler implements GestureListener{
             //add to selection queue if it's a valid BREAK position
             cursor = cursor.target();
             selection.add(new PlaceRequest(cursor.worldx(), cursor.worldy()));
-        }else if(!tileTapped(cursor.target()) && !canTapPlayer(worldx, worldy) && !tryBeginMine(cursor)){
+        }else if(!canTapPlayer(worldx, worldy)){
+            boolean consumed = false;
             //else, try and carry units
             if(player.getCarry() != null){
+                consumed = true;
                 player.dropCarry(); //drop off unit
             }else{
                 Unit unit = Units.getClosest(player.getTeam(), Graphics.world(x, y).x, Graphics.world(x, y).y, 4f, u -> !u.isFlying() && u.getMass() <= player.mech.carryWeight);
 
                 if(unit != null){
                     player.moveTarget = unit;
+                    consumed = true;
                     Effects.effect(Fx.select, unit.getX(), unit.getY());
                 }
+            }
+
+            if(!consumed && !tileTapped(cursor.target())){
+                tryBeginMine(cursor);
             }
         }
 
@@ -696,27 +701,15 @@ public class MobileInput extends InputHandler implements GestureListener{
 
     @Override
     public boolean pinch(Vector2 initialPointer1, Vector2 initialPointer2, Vector2 pointer1, Vector2 pointer2){
-        if(pinch1.x < 0){
-            pinch1.set(initialPointer1);
-            pinch2.set(initialPointer2);
-        }
-
-        pinch1.set(pointer1);
-        pinch2.set(pointer2);
-
         return false;
     }
 
     @Override
     public boolean zoom(float initialDistance, float distance){
-        if(initzoom < 0){
-            initzoom = initialDistance;
-        }
 
-        if(Math.abs(distance - initzoom) > io.anuke.ucore.scene.ui.layout.Unit.dp.scl(100f) && !zoomed){
-            int amount = (distance > initzoom ? 1 : -1);
+        if(Math.abs(distance - initialDistance) > io.anuke.ucore.scene.ui.layout.Unit.dp.scl(100f) && !zoomed){
+            int amount = (distance > initialDistance ? 1 : -1);
             renderer.scaleCamera(Math.round(io.anuke.ucore.scene.ui.layout.Unit.dp.scl(amount)));
-            initzoom = distance;
             zoomed = true;
             return true;
         }
@@ -726,8 +719,6 @@ public class MobileInput extends InputHandler implements GestureListener{
 
     @Override
     public void pinchStop(){
-        initzoom = -1;
-        pinch2.set(pinch1.set(-1, -1));
         zoomed = false;
     }
 

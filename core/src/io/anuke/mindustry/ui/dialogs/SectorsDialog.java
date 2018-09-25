@@ -43,8 +43,8 @@ public class SectorsDialog extends FloatingDialog{
                     (selected.hasSave() ? "  [accent]/[white] " + Bundles.format("text.sector.time", selected.getSave().getPlayTime()) : ""))));
         content().row();
         content().label(() -> Bundles.format("text.mission", selected == null || selected.completedMissions >= selected.missions.size
-        ? Bundles.get("text.none") : selected.missions.get(selected.completedMissions).displayString())
-                        + "[WHITE] " + (selected == null ? "" : Bundles.format("text.save.difficulty", "[LIGHT_GRAY]" + selected.getDifficulty().toString())));
+        ? Bundles.get("text.none") : selected.missions.get(selected.completedMissions).menuDisplayString())
+                        + "[WHITE] " /*+ (selected == null ? "" : Bundles.format("text.save.difficulty", "[LIGHT_GRAY]" + selected.getDifficulty().toString()))*/);
         content().row();
         content().add(new SectorView()).grow();
         content().row();
@@ -75,6 +75,7 @@ public class SectorsDialog extends FloatingDialog{
             addListener(new InputListener(){
                 @Override
                 public boolean touchDown(InputEvent event, float x, float y, int pointer, int button){
+                    if(pointer != 0) return false;
                     Cursors.setHand();
                     lastX = x;
                     lastY = y;
@@ -83,6 +84,7 @@ public class SectorsDialog extends FloatingDialog{
 
                 @Override
                 public void touchDragged(InputEvent event, float x, float y, int pointer){
+                    if(pointer != 0) return;
                     panX -= x - lastX;
                     panY -= y - lastY;
 
@@ -92,6 +94,7 @@ public class SectorsDialog extends FloatingDialog{
 
                 @Override
                 public void touchUp(InputEvent event, float x, float y, int pointer, int button){
+                    if(pointer != 0) return;
                     Cursors.restoreCursor();
                 }
             });
@@ -110,9 +113,9 @@ public class SectorsDialog extends FloatingDialog{
 
             float padSectorSize = sectorSize + sectorPadding;
 
-            float clipSize = Math.min(width, height);
-            int shownSectors = (int)(clipSize/padSectorSize);
-            clip.setSize(clipSize).setCenter(x + width/2f, y + height/2f);
+            int shownSectorsX = (int)(width/padSectorSize);
+            int shownSectorsY = (int)(height/padSectorSize);
+            clip.setSize(width, height).setCenter(x + width/2f, y + height/2f);
             Graphics.flush();
             boolean clipped = ScissorStack.pushScissors(clip);
 
@@ -121,8 +124,8 @@ public class SectorsDialog extends FloatingDialog{
 
             Vector2 mouse = Graphics.mouse();
 
-            for(int x = -shownSectors; x <= shownSectors; x++){
-                for(int y = -shownSectors; y <= shownSectors; y++){
+            for(int x = -shownSectorsX; x <= shownSectorsX; x++){
+                for(int y = -shownSectorsY; y <= shownSectorsY; y++){
                     int sectorX = offsetX + x;
                     int sectorY = offsetY + y;
 
@@ -130,19 +133,21 @@ public class SectorsDialog extends FloatingDialog{
                     float drawY = y + height/2f + sectorY * padSectorSize - offsetY * padSectorSize - panY % padSectorSize;
 
                     Sector sector = world.sectors().get(sectorX, sectorY);
-                    int size = (sector == null ? 1 : sector.size);
-                    float padding = (size-1) * sectorPadding;
+                    int width = (sector == null ? 1 : sector.width);
+                    int height = (sector == null ? 1 : sector.height);
+                    float paddingx = (width-1) * sectorPadding;
+                    float paddingy = (height-1) * sectorPadding;
 
                     if(sector != null && (sector.x != sectorX || sector.y != sectorY)){
                         continue;
                     }
 
-                    drawX += (size-1)/2f*padSectorSize;
-                    drawY += (size-1)/2f*padSectorSize;
+                    drawX += (width-1)/2f*padSectorSize;
+                    drawY += (height-1)/2f*padSectorSize;
 
                     if(sector != null && sector.texture != null){
                         Draw.color(Color.WHITE);
-                        Draw.rect(sector.texture, drawX, drawY, sectorSize * size + padding, sectorSize * size + padding);
+                        Draw.rect(sector.texture, drawX, drawY, sectorSize * width + paddingx, sectorSize * height + paddingy);
                     }
 
                     float stroke = 4f;
@@ -152,8 +157,8 @@ public class SectorsDialog extends FloatingDialog{
                     }else if(sector == selected){
                         Draw.color(Palette.place);
                         stroke = 6f;
-                    }else if(Mathf.inRect(mouse.x, mouse.y, drawX - padSectorSize/2f * size, drawY - padSectorSize/2f * size,
-                                                            drawX + padSectorSize/2f * size, drawY + padSectorSize/2f * size)){
+                    }else if(Mathf.inRect(mouse.x, mouse.y, drawX - padSectorSize/2f * width, drawY - padSectorSize/2f * height,
+                                                            drawX + padSectorSize/2f * width, drawY + padSectorSize/2f * height)){
                         if(clicked){
                             selectSector(sector);
                         }
@@ -165,13 +170,13 @@ public class SectorsDialog extends FloatingDialog{
                     }
 
                     Lines.stroke(Unit.dp.scl(stroke));
-                    Lines.crect(drawX, drawY, sectorSize * size + padding, sectorSize * size + padding, (int)stroke);
+                    Lines.crect(drawX, drawY, sectorSize * width + paddingx, sectorSize * height + paddingy, (int)stroke);
                 }
             }
 
             Draw.color(Palette.accent);
             Lines.stroke(Unit.dp.scl(4f));
-            Lines.crect(x + width/2f, y + height/2f, clipSize, clipSize);
+            Lines.crect(x + width/2f, y + height/2f, width, height);
 
             Draw.reset();
             Graphics.flush();

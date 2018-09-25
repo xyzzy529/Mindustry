@@ -15,6 +15,7 @@ import io.anuke.mindustry.maps.*;
 import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.maps.generation.WorldGenerator;
+import io.anuke.mindustry.world.blocks.OreBlock;
 import io.anuke.ucore.core.Events;
 import io.anuke.ucore.core.Timers;
 import io.anuke.ucore.entities.EntityPhysics;
@@ -195,6 +196,12 @@ public class World extends Module{
         generating = true;
     }
 
+    /**Call to signal the beginning of loading the map with a custom set of tiles.*/
+    public void beginMapLoad(Tile[][] tiles){
+        this.tiles = tiles;
+        generating = true;
+    }
+
     /**
      * Call to signify the end of map loading. Updates tile occlusions and sets up physics for the world.
      * A WorldLoadEvent will be fire.
@@ -202,10 +209,15 @@ public class World extends Module{
     public void endMapLoad(){
         for(int x = 0; x < tiles.length; x++){
             for(int y = 0; y < tiles[0].length; y++){
-                tiles[x][y].updateOcclusion();
+                Tile tile = tiles[x][y];
+                tile.updateOcclusion();
 
-                if(tiles[x][y].entity != null){
-                    tiles[x][y].entity.updateProximity();
+                if(tile.floor() instanceof OreBlock && tile.hasCliffs()){
+                    tile.setFloor(((OreBlock) tile.floor()).base);
+                }
+
+                if(tile.entity != null){
+                    tile.entity.updateProximity();
                 }
             }
         }
@@ -216,11 +228,15 @@ public class World extends Module{
         Events.fire(new WorldLoadEvent());
     }
 
+    public boolean isGenerating(){
+        return generating;
+    }
+
     /**Loads up a sector map. This does not call play(), but calls reset().*/
     public void loadSector(Sector sector){
         currentSector = sector;
         state.mode = sector.missions.peek().getMode();
-        state.difficulty = sector.getDifficulty();
+        state.difficulty = sectors.getDifficulty(sector);
         Timers.mark();
         Timers.mark();
 
@@ -228,7 +244,7 @@ public class World extends Module{
 
         beginMapLoad();
 
-        int width = sectorSize * sector.size, height = sectorSize * sector.size;
+        int width = sectorSize * sector.width, height = sectorSize * sector.height;
 
         Tile[][] tiles = createTiles(width, height);
 
@@ -316,6 +332,15 @@ public class World extends Module{
                 }
             }
         }
+    }
+
+    public int transform(int packed, int oldWidth, int oldHeight, int newWidth, int shiftX, int shiftY){
+        int x = packed % oldWidth;
+        int y = packed / oldWidth;
+        if(!Mathf.inBounds(x, y, oldWidth, oldHeight)) return -1;
+        x += shiftX;
+        y += shiftY;
+        return y*newWidth + x;
     }
 
     /**

@@ -3,6 +3,7 @@ package io.anuke.mindustry.world;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.IntArray;
 import io.anuke.mindustry.entities.Damage;
 import io.anuke.mindustry.entities.Player;
 import io.anuke.mindustry.entities.TileEntity;
@@ -138,6 +139,41 @@ public class Block extends BaseBlock {
         return drops != null && drops.item == item;
     }
 
+    public void updatePowerGraph(Tile tile){
+        TileEntity entity = tile.entity();
+
+        for(Tile other : getPowerConnections(tile, tempTiles)){
+            if(other.entity.power != null){
+                other.entity.power.graph.add(entity.power.graph);
+            }
+        }
+    }
+
+    public void powerGraphRemoved(Tile tile){
+        tile.entity.power.graph.remove(tile);
+        for(int i = 0; i < tile.entity.power.links.size; i++){
+            Tile other = world.tile(tile.entity.power.links.get(i));
+            if(other != null && other.entity != null && other.entity.power != null){
+                other.entity.power.links.removeValue(tile.packedPosition());
+            }
+        }
+    }
+
+    public Array<Tile> getPowerConnections(Tile tile, Array<Tile> out){
+        out.clear();
+        for(Tile other : tile.entity.proximity()){
+            if(other.entity.power != null && !(consumesPower && other.block().consumesPower && !outputsPower && !other.block().outputsPower)){
+                out.add(other);
+            }
+        }
+
+        for(int i = 0; i < tile.entity.power.links.size; i++){
+            Tile link = world.tile(tile.entity.power.links.get(i));
+            if(link != null && link.entity != null && link.entity.power != null) out.add(link);
+        }
+        return out;
+    }
+
     public boolean isLayer(Tile tile){
         return true;
     }
@@ -215,6 +251,19 @@ public class Block extends BaseBlock {
     public void load(){
         shadowRegion = Draw.region(shadow == null ? "shadow-" + size : shadow);
         region = Draw.region(name);
+    }
+
+    /**Called when the world is resized.
+     * Call super!*/
+    public void transformLinks(Tile tile, int oldWidth, int oldHeight, int newWidth, int newHeight, int shiftX, int shiftY){
+        if(tile.entity != null && tile.entity.power != null){
+            IntArray links = tile.entity.power.links;
+            IntArray out = new IntArray();
+            for(int i = 0; i < links.size; i++){
+                out.add(world.transform(links.get(i), oldWidth, oldHeight, newWidth, shiftX, shiftY));
+            }
+            tile.entity.power.links = out;
+        }
     }
 
     /** Called when the block is tapped. */
@@ -444,7 +493,7 @@ public class Block extends BaseBlock {
         return destructible || update;
     }
 
-    public TileEntity getEntity(){
+    public TileEntity newEntity(){
         return new TileEntity();
     }
 
@@ -478,7 +527,8 @@ public class Block extends BaseBlock {
                 "entity.x", tile.entity.x,
                 "entity.y", tile.entity.y,
                 "entity.id", tile.entity.id,
-                "entity.items.total", hasItems ? tile.entity.items.total() : null
+                "entity.items.total", hasItems ? tile.entity.items.total() : null,
+                "entity.graph", tile.entity.power != null && tile.entity.power.graph != null ? tile.entity.power.graph.getID() : null
         );
     }
 }

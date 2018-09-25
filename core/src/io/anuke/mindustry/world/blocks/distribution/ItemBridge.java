@@ -287,7 +287,15 @@ public class ItemBridge extends Block{
     }
 
     @Override
-    public TileEntity getEntity(){
+    public void transformLinks(Tile tile, int oldWidth, int oldHeight, int newWidth, int newHeight, int shiftX, int shiftY){
+        super.transformLinks(tile, oldWidth, oldHeight, newWidth, newHeight, shiftX, shiftY);
+
+        ItemBridgeEntity entity = tile.entity();
+        entity.link = world.transform(entity.link, oldWidth, oldHeight, newWidth, shiftX, shiftY);
+    }
+
+    @Override
+    public TileEntity newEntity(){
         return new ItemBridgeEntity();
     }
 
