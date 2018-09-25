@@ -38,11 +38,12 @@ import java.io.IOException;
 
 import static io.anuke.mindustry.Vars.state;
 import static io.anuke.mindustry.Vars.unitGroups;
+import static io.anuke.mindustry.Vars.waveTeam;
 
 public class CoreBlock extends StorageBlock{
     protected float droneRespawnDuration = 60 * 6;
     protected UnitType droneType = UnitTypes.spirit;
-    protected int maxDrones = 1;
+    protected int maxDrones = 4;
 
     protected TextureRegion openRegion;
     protected TextureRegion topRegion;
@@ -219,13 +220,16 @@ public class CoreBlock extends StorageBlock{
 
             if(entity.solid && entity.warmup > 60f && !Net.client()){
 
-                for(BaseUnit unit : unitGroups[tile.getTeamID()].all()){
-                    if(unit.getSpawner() == tile){
-                        entity.drones.add(unit);
+                if(entity.drones == null) {
+                    entity.drones = new Array<>();
+                    for (BaseUnit unit : unitGroups[tile.getTeamID()].all()) {
+                        if (unit.getSpawner() == tile) {
+                            entity.drones.add(unit);
+                        }
                     }
                 }
 
-                int maxDrones = tile.isEnemyCheat() ? this.maxDrones : 1;
+                int maxDrones = (!state.mode.isPvp && tile.getTeam() == waveTeam) ? this.maxDrones : 1;
 
                 if(entity.drones.size < maxDrones && !TutorialSector.supressDrone()){
                     BaseUnit unit = droneType.create(tile.getTeam());
