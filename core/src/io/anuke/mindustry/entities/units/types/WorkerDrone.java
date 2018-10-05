@@ -7,6 +7,7 @@ import io.anuke.mindustry.entities.traits.TargetTrait;
 import io.anuke.mindustry.entities.units.FlyingUnit;
 import io.anuke.mindustry.entities.units.UnitState;
 import io.anuke.mindustry.world.Tile;
+import io.anuke.ucore.util.Mathf;
 import io.anuke.ucore.util.ThreadQueue;
 
 /**Drone controlled by AI.*/
@@ -38,7 +39,7 @@ public class WorkerDrone extends FlyingUnit implements BuilderTrait{
 
     @Override
     public UnitState getStartState() {
-        return super.getStartState();
+        return work;
     }
 
     @Override
@@ -66,9 +67,26 @@ public class WorkerDrone extends FlyingUnit implements BuilderTrait{
         return 1f;
     }
 
+    @Override
+    public void updateRotation(){
+        if(target != null && (getMineTile() != null || isBuilding())){
+            rotation = Mathf.slerpDelta(rotation, angleTo(target), 0.3f);
+        }else{
+            rotation = Mathf.slerpDelta(rotation, velocity.angle(), 0.3f);
+        }
+    }
+
+    @Override
+    public void behavior(){}
+
     public void circleTo(TargetTrait trait, float range){
         target = trait;
         circle(range);
+    }
+
+    public void moveTo(TargetTrait trait, float range){
+        target = trait;
+        moveTo(range);
     }
 
     public WorkTask getTask() {
@@ -81,7 +99,7 @@ public class WorkerDrone extends FlyingUnit implements BuilderTrait{
     }
 
     /**Completes the current task.*/
-    public void complete(){
+    public void finishTask(){
         if(task != null) task.completed(this);
         task = null;
     }

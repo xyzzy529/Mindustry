@@ -11,13 +11,13 @@ public class DepositTask implements WorkTask {
     @Override
     public void update(WorkerDrone drone) {
         TileEntity tile = drone.getClosestCore();
-        drone.circleTo(tile, 16f);
+        drone.circleTo(tile, 20f);
 
-        if(drone.distanceTo(tile) < 24f){
+        if(drone.distanceTo(tile) < 30f){
             UnitInventory inventory = drone.inventory;
-            Call.transferItemTo(inventory.getItem().item, inventory.getItem().amount, tile.x, tile.y, tile.tile);
+            Call.transferItemTo(inventory.getItem().item, inventory.getItem().amount, drone.x, drone.y, tile.tile);
             inventory.clearItem();
-            drone.complete();
+            drone.finishTask();
         }
     }
 }

@@ -5,5 +5,9 @@ import io.anuke.mindustry.entities.units.types.WorkerDrone;
 public interface WorkTask{
     default void update(WorkerDrone drone){}
     default void completed(WorkerDrone drone){}
-    default void begin(WorkerDrone drone){}
+
+    default void begin(WorkerDrone drone){
+        drone.setMineTile(null);
+        drone.clearBuilding();
+    }
 }

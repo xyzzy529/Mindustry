@@ -35,7 +35,7 @@ public class AI{
 
     void assignTask(WorkerDrone drone){
         if(!drone.getClosestCore().items.has(Items.copper)){
-            drone.beginTask(new MineTask(world.indexer().findClosestOre(drone.x, drone.y, Items.copper)));
+            drone.beginTask(new MineTask(world.indexer().findClosestOre(drone.x, drone.y, Items.copper), 60f*15));
         }else{
             drone.beginTask(new BuildBlockTask(getClosestDrillReq()));
         }
