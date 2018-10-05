@@ -86,9 +86,7 @@ public class CoreBlock extends StorageBlock{
     @Override
     public void onProximityUpdate(Tile tile) {
         //add cores
-        if(!state.teams.get(tile.getTeam()).cores.contains(tile, true)){
-            state.teams.get(tile.getTeam()).cores.add(tile);
-        }
+        state.teams.get(tile.getTeam()).cores.add(tile);
     }
 
     @Override
@@ -98,7 +96,7 @@ public class CoreBlock extends StorageBlock{
 
     @Override
     public void removed(Tile tile){
-        state.teams.get(tile.getTeam()).cores.removeValue(tile, true);
+        state.teams.get(tile.getTeam()).cores.remove(tile);
     }
 
     @Override

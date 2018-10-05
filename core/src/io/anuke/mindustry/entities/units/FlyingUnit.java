@@ -58,6 +58,12 @@ public abstract class FlyingUnit extends BaseUnit implements CarryTrait{
             if(target == null){
                 retarget(() -> {
                     targetClosest();
+
+                    if(target == null && isCommanded() && getCommand() == UnitCommand.patrol){
+                        setState(patrol);
+                        return;
+                    }
+
                     if(target == null) targetClosestEnemyFlag(BlockFlag.target);
                     if(target == null) targetClosestEnemyFlag(BlockFlag.producer);
                     if(target == null) targetClosestEnemyFlag(BlockFlag.turret);
@@ -82,7 +88,19 @@ public abstract class FlyingUnit extends BaseUnit implements CarryTrait{
     },
     patrol = new UnitState(){
         public void update(){
-            //TODO
+            retarget(() -> {
+                targetClosest();
+
+                if(target != null){
+                    setState(attack);
+                }
+
+                target = getClosestCore();
+            });
+
+            if(target != null){
+                circle(60f + Mathf.absin(Timers.time() + id * 23525, 70f, 1200f));
+            }
         }
     },
     retreat = new UnitState(){
@@ -104,17 +122,12 @@ public abstract class FlyingUnit extends BaseUnit implements CarryTrait{
         }
     };
 
-    //instantiation only
-    public FlyingUnit(){
-
-    }
-
     @Override
     public void onCommand(UnitCommand command){
         state.set(command == UnitCommand.retreat ? retreat :
-                (command == UnitCommand.attack ? attack :
-                (command == UnitCommand.patrol ? patrol :
-                (null))));
+                  command == UnitCommand.attack ? attack :
+                  command == UnitCommand.patrol ? patrol :
+                  null);
     }
 
     @Override

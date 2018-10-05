@@ -19,7 +19,7 @@ import io.anuke.ucore.core.Events;
 import io.anuke.ucore.core.Timers;
 import io.anuke.ucore.entities.Entities;
 import io.anuke.ucore.entities.EntityGroup;
-import io.anuke.ucore.entities.EntityPhysics;
+import io.anuke.ucore.entities.EntityQuery;
 import io.anuke.ucore.modules.Module;
 
 import static io.anuke.mindustry.Vars.*;
@@ -41,8 +41,8 @@ public class Logic extends Module{
 
     @Override
     public void init(){
-        EntityPhysics.initPhysics();
-        EntityPhysics.collisions().setCollider(tilesize, world::solid);
+        EntityQuery.init();
+        EntityQuery.collisions().setCollider(tilesize, world::solid);
     }
 
     public void play(){
@@ -128,8 +128,6 @@ public class Logic extends Module{
 
         if(!state.is(State.menu)){
 
-            if(control != null) control.triggerUpdateInput();
-
             if(!state.is(State.paused) || Net.active()){
                 Timers.update();
             }
@@ -177,12 +175,19 @@ public class Logic extends Module{
                 }
 
                 for(EntityGroup group : unitGroups){
-                    if(!group.isEmpty()){
-                        EntityPhysics.collideGroups(bulletGroup, group);
+                    if(group.isEmpty()) continue;
+
+                    EntityQuery.collideGroups(bulletGroup, group);
+                    EntityQuery.collideGroups(group, playerGroup);
+
+                    for(EntityGroup other : unitGroups){
+                        if(other.isEmpty()) continue;
+                        EntityQuery.collideGroups(group, other);
                     }
                 }
 
-                EntityPhysics.collideGroups(bulletGroup, playerGroup);
+                EntityQuery.collideGroups(bulletGroup, playerGroup);
+                EntityQuery.collideGroups(playerGroup, playerGroup);
 
                 world.pathfinder().update();
             }

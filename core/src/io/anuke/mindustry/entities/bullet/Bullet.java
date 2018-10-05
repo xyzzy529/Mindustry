@@ -1,7 +1,6 @@
 package io.anuke.mindustry.entities.bullet;
 
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.utils.TimeUtils;
 import io.anuke.annotations.Annotations.Loc;
 import io.anuke.annotations.Annotations.Remote;
 import io.anuke.mindustry.entities.Unit;
@@ -64,21 +63,14 @@ public class Bullet extends BulletEntity<BulletType> implements TeamTrait, SyncT
         if(type.keepVelocity){
             bullet.velocity.add(owner instanceof VelocityTrait ? ((VelocityTrait) owner).getVelocity() : Vector2.Zero);
         }
-        bullet.hitbox.setSize(type.hitsize);
 
         bullet.team = team;
         bullet.type = type;
         bullet.lifeScl = lifetimeScl;
 
-        //translate bullets backwards, purely for visual reasons
-        float backDelta = Timers.delta();
-
-        bullet.lastPosition().set(x - bullet.velocity.x * backDelta, y - bullet.velocity.y * backDelta, bullet.angle());
-        bullet.setLastUpdated(TimeUtils.millis());
-        bullet.setUpdateSpacing((long) ((Timers.delta() / 60f) * 1000));
-        bullet.set(x, y);
-
+        bullet.set(x - bullet.velocity.x * Timers.delta(), y - bullet.velocity.y * Timers.delta());
         bullet.add();
+
         return bullet;
     }
 
@@ -181,7 +173,7 @@ public class Bullet extends BulletEntity<BulletType> implements TeamTrait, SyncT
 
     @Override
     public boolean collides(SolidTrait other){
-        return type.collides && super.collides(other) && !supressCollision;
+        return type.collides && super.collides(other) && !supressCollision && !(other instanceof Unit && ((Unit) other).isFlying() && !type.collidesAir);
     }
 
     @Override

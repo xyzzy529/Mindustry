@@ -114,6 +114,14 @@ public class Lightning extends SolidEntity implements Poolable, DrawTrait, SyncT
         return l;
     }
 
+
+
+    @Override
+    public void getHitbox(Rectangle rectangle){}
+
+    @Override
+    public void getHitboxTile(Rectangle rectangle){}
+
     @Override
     public void absorb(){
         activeFrame = 99;
@@ -183,7 +191,7 @@ public class Lightning extends SolidEntity implements Poolable, DrawTrait, SyncT
                 Units.getNearbyEnemies(team, rect, unit -> {
                     unit.getHitbox(hitrect);
                     if(rect.overlaps(hitrect)){
-                        unit.damage(damage * (unit.hasEffect(StatusEffects.wet) ? 2f : 1f));
+                        unit.damage(damage * (unit.hasEffect(StatusEffects.wet) ? wetDamageMultiplier : 1f));
                         Effects.effect(effect, vec.x, vec.y, 0f);
                     }
                 });
