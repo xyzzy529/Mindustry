@@ -24,7 +24,10 @@ import io.anuke.ucore.graphics.Draw;
 import io.anuke.ucore.graphics.Fill;
 import io.anuke.ucore.graphics.Lines;
 import io.anuke.ucore.graphics.Shapes;
-import io.anuke.ucore.util.*;
+import io.anuke.ucore.util.Angles;
+import io.anuke.ucore.util.Geometry;
+import io.anuke.ucore.util.Mathf;
+import io.anuke.ucore.util.Translator;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -36,7 +39,7 @@ import static io.anuke.mindustry.Vars.*;
 /**
  * Interface for units that build, break or mine things.
  */
-public interface BuilderTrait extends Entity{
+public interface BuilderTrait extends Entity, TeamTrait {
     //these are not instance variables!
     float placeDistance = 150f;
     float mineDistance = 70f;
@@ -168,13 +171,14 @@ public interface BuilderTrait extends Entity{
      * Update building mechanism for this unit.
      * This includes mining.
      */
-    default void updateBuilding(Unit unit){
+    default void updateBuilding(){
         BuildRequest current = getCurrentRequest();
+        Unit unit = (Unit)this;
 
         //update mining here
         if(current == null){
             if(getMineTile() != null){
-                updateMining(unit);
+                updateMining();
             }
             return;
         }else{
@@ -185,15 +189,15 @@ public interface BuilderTrait extends Entity{
 
         Tile tile = world.tile(current.x, current.y);
 
-        if(unit.distanceTo(tile) > placeDistance){
+        if(distanceTo(tile) > placeDistance){
             return;
         }
 
         if(!(tile.block() instanceof BuildBlock) ){
-            if(canCreateBlocks() && !current.remove && Build.validPlace(unit.getTeam(), current.x, current.y, current.recipe.result, current.rotation)){
-                Build.beginPlace(unit.getTeam(), current.x, current.y, current.recipe, current.rotation);
-            }else if(canCreateBlocks() && current.remove && Build.validBreak(unit.getTeam(), current.x, current.y)){
-                Build.beginBreak(unit.getTeam(), current.x, current.y);
+            if(canCreateBlocks() && !current.remove && Build.validPlace(getTeam(), current.x, current.y, current.recipe.result, current.rotation)){
+                Build.beginPlace(getTeam(), current.x, current.y, current.recipe, current.rotation);
+            }else if(canCreateBlocks() && current.remove && Build.validBreak(getTeam(), current.x, current.y)){
+                Build.beginBreak(getTeam(), current.x, current.y);
             }else{
                 getPlaceQueue().removeFirst();
                 return;
@@ -215,8 +219,8 @@ public interface BuilderTrait extends Entity{
             return;
         }
 
-        if(unit.distanceTo(tile) <= placeDistance){
-            unit.rotation = Mathf.slerpDelta(unit.rotation, unit.angleTo(entity), 0.4f);
+        if(distanceTo(tile) <= placeDistance){
+            unit.rotation = Mathf.slerpDelta(unit.rotation, angleTo(entity), 0.4f);
         }
 
         //progress is synced, thus not updated clientside
@@ -235,8 +239,9 @@ public interface BuilderTrait extends Entity{
     }
 
     /**Do not call directly.*/
-    default void updateMining(Unit unit){
+    default void updateMining(){
         Tile tile = getMineTile();
+        Unit unit = (Unit)this;
         TileEntity core = unit.getClosestCore();
 
         if(core == null || tile.block() != Blocks.air || unit.distanceTo(tile.worldx(), tile.worldy()) > mineDistance || !unit.inventory.canAcceptItem(tile.floor().drops.item)){
@@ -268,7 +273,8 @@ public interface BuilderTrait extends Entity{
     }
 
     /**Draw placement effects for an entity. This includes mining*/
-    default void drawBuilding(Unit unit){
+    default void drawBuilding(){
+        Unit unit = (Unit)this;
         BuildRequest request;
 
         synchronized(getPlaceQueue()){

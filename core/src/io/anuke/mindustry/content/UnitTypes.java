@@ -9,7 +9,7 @@ import io.anuke.mindustry.type.ContentType;
 
 public class UnitTypes implements ContentList{
     public static UnitType
-        spirit, phantom,
+        spirit, worker, phantom,
         alphaDrone,
         wraith, ghoul, revenant,
         dagger, titan, fortress;
@@ -37,6 +37,16 @@ public class UnitTypes implements ContentList{
         };
 
         spirit = new UnitType("spirit", Spirit.class, Spirit::new){{
+            isFlying = true;
+            drag = 0.01f;
+            speed = 0.2f;
+            maxVelocity = 0.8f;
+            range = 50f;
+            healSpeed = 0.22f;
+            health = 60;
+        }};
+
+        worker = new UnitType("worker", WorkerDrone.class, WorkerDrone::new){{
             isFlying = true;
             drag = 0.01f;
             speed = 0.2f;

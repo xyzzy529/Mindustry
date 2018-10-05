@@ -251,7 +251,6 @@ public abstract class Drone extends FlyingUnit implements BuilderTrait{
         });
     }
 
-
     private void notifyPlaced(BuildEntity entity){
         float timeToBuild = entity.recipe.cost;
         float dist = Math.min(entity.distanceTo(x, y) - placeDistance, 0);
@@ -307,7 +306,7 @@ public abstract class Drone extends FlyingUnit implements BuilderTrait{
             entity.health = Mathf.clamp(entity.health, 0, entity.tile.block().health);
         }
 
-        updateBuilding(this);
+        updateBuilding();
     }
 
     @Override
@@ -348,7 +347,7 @@ public abstract class Drone extends FlyingUnit implements BuilderTrait{
             Draw.color();
         }
 
-        drawBuilding(this);
+        drawBuilding();
     }
 
     @Override

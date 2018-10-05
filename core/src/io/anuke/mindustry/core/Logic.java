@@ -66,7 +66,7 @@ public class Logic extends Module{
         state.wavetime = wavespace * state.difficulty.timeScaling;
         state.gameOver = false;
         state.teams = new Teams();
-        state.teams.get(waveTeam).ai = new AI();
+        state.teams.get(waveTeam).ai = new AI(waveTeam);
 
         Timers.clear();
         Entities.clear();
@@ -142,7 +142,7 @@ public class Logic extends Module{
 
                 for(Team team : Team.all){
                     if(state.teams.isActive(team) && state.teams.get(team).ai != null){
-                        state.teams.get(team).ai.update(team);
+                        state.teams.get(team).ai.update();
                     }
                 }
 

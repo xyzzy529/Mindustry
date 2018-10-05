@@ -370,7 +370,7 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
     public void drawOver(){
         if(dead) return;
 
-        drawBuilding(this);
+        drawBuilding();
 
         if(mech.flying || boostHeat > 0.001f){
             float wobblyness = 0.6f;
@@ -479,7 +479,7 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
 
         if(!isLocal){
             interpolate();
-            updateBuilding(this); //building happens even with non-locals
+            updateBuilding(); //building happens even with non-locals
             status.update(this); //status effect updating also happens with non locals for effect purposes
             updateVelocityStatus(); //velocity too, for visual purposes
 
@@ -503,7 +503,7 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
             updateMech();
         }
 
-        updateBuilding(this);
+        updateBuilding();
 
         x = Mathf.clamp(x, 0, world.width() * tilesize);
         y = Mathf.clamp(y, 0, world.height() * tilesize);
