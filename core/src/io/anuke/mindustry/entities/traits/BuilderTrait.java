@@ -185,8 +185,6 @@ public interface BuilderTrait extends Entity, TeamTrait {
             setMineTile(null);
         }
 
-
-
         Tile tile = world.tile(current.x, current.y);
 
         if(distanceTo(tile) > placeDistance){

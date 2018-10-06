@@ -5,6 +5,8 @@ import io.anuke.mindustry.ai.control.WorkTask;
 import io.anuke.mindustry.entities.TileEntity;
 import io.anuke.mindustry.entities.traits.BuilderTrait.BuildRequest;
 import io.anuke.mindustry.entities.units.types.WorkerDrone;
+import io.anuke.mindustry.type.ItemStack;
+import io.anuke.mindustry.world.Tile;
 
 public class BuildBlockTask implements WorkTask{
     private final BuildRequest request;
@@ -15,7 +17,8 @@ public class BuildBlockTask implements WorkTask{
 
     @Override
     public void begin(WorkerDrone drone){
-        drone.getPlaceQueue().clear();
+        drone.setMineTile(null);
+        drone.clearBuilding();
         drone.getPlaceQueue().addLast(request);
     }
 
@@ -25,7 +28,6 @@ public class BuildBlockTask implements WorkTask{
 
         TileEntity core = drone.getClosestCore();
 
-        /*
         if(core != null){
             for(ItemStack stack : request.recipe.requirements){
                 if(!core.items.has(stack.item, stack.amount) && stack.item.genOre){
@@ -34,9 +36,9 @@ public class BuildBlockTask implements WorkTask{
                     return;
                 }
             }
-        }*/
+        }
 
-        if(!drone.isBuilding()){
+        if(request.progress >= 1f){
             drone.finishTask();
         }
     }

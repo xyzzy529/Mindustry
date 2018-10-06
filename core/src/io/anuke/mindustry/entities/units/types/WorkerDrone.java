@@ -1,5 +1,6 @@
 package io.anuke.mindustry.entities.units.types;
 
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Queue;
 import io.anuke.mindustry.ai.control.WorkTask;
 import io.anuke.mindustry.entities.traits.BuilderTrait;
@@ -12,15 +13,15 @@ import io.anuke.ucore.util.ThreadQueue;
 
 /**Drone controlled by AI.*/
 public class WorkerDrone extends FlyingUnit implements BuilderTrait{
-    protected WorkTask task;
+    protected Array<WorkTask> tasks = new Array<>();
     protected Tile mineTile;
     protected Queue<BuildRequest> placeQueue = new ThreadQueue<>();
 
     public final UnitState work = new UnitState(){
         @Override
         public void update() {
-            if(task != null){
-                task.update(WorkerDrone.this);
+            if(getTask() != null){
+                getTask().update(WorkerDrone.this);
             }
         }
     };
@@ -89,18 +90,21 @@ public class WorkerDrone extends FlyingUnit implements BuilderTrait{
         moveTo(range);
     }
 
-    public WorkTask getTask() {
-        return task;
+    public WorkTask getTask(){
+        return tasks.size == 0 ? null : tasks.peek();
     }
 
     public void beginTask(WorkTask task){
-        this.task = task;
+        tasks.add(task);
         task.begin(this);
     }
 
     /**Completes the current task.*/
     public void finishTask(){
-        if(task != null) task.completed(this);
-        task = null;
+        if(getTask() != null) getTask().completed(this);
+        tasks.pop();
+        if(getTask() != null){
+            getTask().begin(this);
+        }
     }
 }

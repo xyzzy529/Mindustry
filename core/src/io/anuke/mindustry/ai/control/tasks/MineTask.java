@@ -19,8 +19,7 @@ public class MineTask implements WorkTask{
 
     @Override
     public void begin(WorkerDrone drone){
-        drone.clearBuilding();
-        drone.setMineTile(tile);
+        drone.getPlaceQueue().clear();
     }
 
     @Override

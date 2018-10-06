@@ -1,7 +1,6 @@
 package io.anuke.mindustry.ai.control;
 
 import io.anuke.mindustry.ai.control.tasks.BuildBlockTask;
-import io.anuke.mindustry.ai.control.tasks.MineTask;
 import io.anuke.mindustry.content.Items;
 import io.anuke.mindustry.content.blocks.ProductionBlocks;
 import io.anuke.mindustry.entities.traits.BuilderTrait.BuildRequest;
@@ -34,11 +33,7 @@ public class AI{
     }
 
     void assignTask(WorkerDrone drone){
-        if(!drone.getClosestCore().items.has(Items.copper)){
-            drone.beginTask(new MineTask(world.indexer().findClosestOre(drone.x, drone.y, Items.copper), 60f*15));
-        }else{
-            drone.beginTask(new BuildBlockTask(getClosestDrillReq()));
-        }
+        drone.beginTask(new BuildBlockTask(getClosestDrillReq()));
     }
 
     BuildRequest getClosestDrillReq(){

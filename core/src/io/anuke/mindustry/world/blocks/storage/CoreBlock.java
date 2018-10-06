@@ -230,7 +230,7 @@ public class CoreBlock extends StorageBlock{
                 int maxDrones = (!state.mode.isPvp && tile.getTeam() == waveTeam) ? this.maxDrones : 1;
 
                 if(entity.drones.size < maxDrones && !TutorialSector.supressDrone()){
-                    BaseUnit unit = (maxDrones > 1 ? UnitTypes.worker : droneType).create(tile.getTeam());
+                    BaseUnit unit = (!state.mode.isPvp && tile.getTeam() == waveTeam ? UnitTypes.worker : droneType).create(tile.getTeam());
                     unit.setSpawner(tile);
                     unit.setDead(true);
                     unit.add();
