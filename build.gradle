@@ -9,7 +9,7 @@ buildscript {
     dependencies {
         classpath 'com.mobidevelop.robovm:robovm-gradle-plugin:2.3.0'
         classpath 'de.richsource.gradle.plugins:gwt-gradle-plugin:0.6'
-        classpath 'com.android.tools.build:gradle:3.1.3'
+        classpath 'com.android.tools.build:gradle:3.2.0'
         classpath "com.badlogicgames.gdx:gdx-tools:1.9.8"
     }
 }
@@ -27,7 +27,7 @@ allprojects {
         appName = 'Mindustry'
         gdxVersion = '1.9.8'
         roboVMVersion = '2.3.0'
-        uCoreVersion = 'e0789c76198a90cb115e12f03d44ddec35b35a6e'
+        uCoreVersion = 'c231d13a23788716102c8b568c72276624b8ffdd'
 
         getVersionString = {
             String buildVersion = getBuildVersion()
@@ -47,10 +47,10 @@ allprojects {
             def output = 'en\n'
             def bundles = new File(project(':core').projectDir, 'assets/bundles/')
             bundles.listFiles().each { other ->
-                if(other.name == "bundle.properties") return;
+                if(other.name == "bundle.properties") return
                 output += other.name.substring("bundle".length() + 1, other.name.lastIndexOf('.')) + "\n"
             }
-            new File(project(':core').projectDir, 'assets/locales').text = output;
+            new File(project(':core').projectDir, 'assets/locales').text = output
         }
 
         writeVersion = {
@@ -59,7 +59,7 @@ allprojects {
 
             try{
                 pfile.createNewFile()
-            }catch (Exception e){}
+            }catch (Exception ignored){}
 
             if(pfile.exists()) {
 

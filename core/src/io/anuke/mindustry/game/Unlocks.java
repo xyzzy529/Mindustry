@@ -17,6 +17,14 @@ public class Unlocks{
     static{
         Settings.setSerializer(ContentType.class, (stream, t) -> stream.writeInt(t.ordinal()), stream -> ContentType.values()[stream.readInt()]);
     }
+
+    /**Handles the event of content being used by either the player or some block.*/
+    public void handleContentUsed(UnlockableContent content){
+        if(world.getSector() != null){
+            world.getSector().currentMission().onContentUsed(content);
+        }
+        unlockContent(content);
+    }
     
     /** Returns whether or not this piece of content is unlocked yet.*/
     public boolean isUnlocked(UnlockableContent content){
@@ -31,8 +39,7 @@ public class Unlocks{
      * @return whether or not this content was newly unlocked.
      */
     public boolean unlockContent(UnlockableContent content){
-        if(rootSet().isUnlocked(content)) return false;
-        return currentSet().unlockContent(content);
+        return !rootSet().isUnlocked(content) && currentSet().unlockContent(content);
     }
 
     private ContentUnlockSet currentSet(){
@@ -76,7 +83,7 @@ public class Unlocks{
     public void load(){
         sets.clear();
 
-        ObjectMap<String, ObjectMap<ContentType, Array<String>>> result = Settings.getObject("content-sets", ObjectMap.class, () -> new ObjectMap<>());
+        ObjectMap<String, ObjectMap<ContentType, Array<String>>> result = Settings.getObject("content-sets", ObjectMap.class, ObjectMap::new);
 
         for(Entry<String, ObjectMap<ContentType, Array<String>>> outer : result.entries()){
             ContentUnlockSet cset = new ContentUnlockSet();

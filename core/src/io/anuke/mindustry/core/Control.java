@@ -40,13 +40,13 @@ public class Control extends Module{
     /** Minimum period of time between the same sound being played.*/
     private static final long minSoundPeriod = 100;
 
+    public final Saves saves;
+    public final Unlocks unlocks;
+
     private boolean hiscore = false;
     private boolean wasPaused = false;
-    private Saves saves;
-    private Unlocks unlocks;
     private InputHandler[] inputs = {};
     private ObjectMap<Sound, Long> soundMap = new ObjectMap<>();
-
     private Throwable error;
 
     public Control(){
@@ -73,7 +73,7 @@ public class Control extends Module{
             long value = soundMap.get(sound, 0L);
 
             if(TimeUtils.timeSinceMillis(value) >= minSoundPeriod){
-                threads.run(() -> sound.play(volume));
+                threads.runGraphics(() -> sound.play(volume));
                 soundMap.put(sound, time);
             }
         });
@@ -159,6 +159,12 @@ public class Control extends Module{
         });
 
         Events.on(WorldLoadEvent.class, event -> threads.runGraphics(() -> Events.fire(new WorldLoadGraphicsEvent())));
+
+        Events.on(BlockBuildEvent.class, event -> {
+            if(event.team == players[0].getTeam() && Recipe.getByResult(event.tile.block()) != null){
+                unlocks.handleContentUsed(Recipe.getByResult(event.tile.block()));
+            }
+        });
     }
 
     public void addPlayer(int index){
@@ -218,16 +224,8 @@ public class Control extends Module{
         System.arraycopy(oldi, 0, inputs, 0, inputs.length);
     }
 
-    public Unlocks unlocks(){
-        return unlocks;
-    }
-
     public void setError(Throwable error){
         this.error = error;
-    }
-
-    public Saves getSaves(){
-        return saves;
     }
 
     public InputHandler input(int index){
@@ -256,10 +254,10 @@ public class Control extends Module{
 
         if(entity == null) return;
 
-        entity.items.forEach((item, amount) -> control.unlocks().unlockContent(item));
+        entity.items.forEach((item, amount) -> unlocks.unlockContent(item));
 
         if(players[0].inventory.hasItem()){
-            control.unlocks().unlockContent(players[0].inventory.getItem().item);
+            unlocks.unlockContent(players[0].inventory.getItem().item);
         }
 
         outer:
@@ -270,7 +268,7 @@ public class Control extends Module{
                     if(!entity.items.has(stack.item, Math.min((int) (stack.amount * unlockResourceScaling), 2000))) continue outer;
                 }
 
-                if(control.unlocks().unlockContent(recipe)){
+                if(unlocks.unlockContent(recipe)){
                     ui.hudfrag.showUnlock(recipe);
                 }
             }
@@ -327,7 +325,7 @@ public class Control extends Module{
     /** Called from main logic thread.*/
     public void runUpdateLogic(){
         if(!state.is(State.menu)){
-            renderer.minimap().updateUnitArray();
+            renderer.minimap.updateUnitArray();
         }
     }
 

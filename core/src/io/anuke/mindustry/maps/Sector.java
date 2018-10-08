@@ -27,6 +27,7 @@ public class Sector{
     public int width = 1, height = 1;
     /**Num of missions in this sector that have been completed so far.*/
     public int completedMissions;
+
     /**Display texture. Needs to be disposed.*/
     public transient Texture texture;
     /**Missions of this sector-- what needs to be accomplished to unlock it.*/
@@ -47,11 +48,11 @@ public class Sector{
     }
 
     public SaveSlot getSave(){
-        return !hasSave() ? null : control.getSaves().getByID(saveID);
+        return !hasSave() ? null : control.saves.getByID(saveID);
     }
 
     public boolean hasSave(){
-        return !headless && control.getSaves().getByID(saveID) != null;
+        return !headless && control.saves.getByID(saveID) != null;
     }
 
     public int packedPosition(){
