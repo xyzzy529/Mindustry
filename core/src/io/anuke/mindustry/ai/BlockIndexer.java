@@ -10,6 +10,8 @@ import io.anuke.mindustry.game.EventType.WorldLoadEvent;
 import io.anuke.mindustry.game.Team;
 import io.anuke.mindustry.game.Teams.TeamData;
 import io.anuke.mindustry.type.Item;
+import io.anuke.mindustry.world.Block;
+import io.anuke.mindustry.world.Build;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.world.meta.BlockFlag;
 import io.anuke.ucore.core.Events;
@@ -173,6 +175,30 @@ public class BlockIndexer{
         }
 
         return null;
+    }
+
+    public Tile findClosestOre(float xp, float yp, Item item, Block block){
+        Tile tile = Geometry.findClosest(xp, yp, world.indexer().getOrePositions(item));
+
+        Tile closest = null;
+        float cdist = 0f;
+
+        if(tile == null) return null;
+
+        for(int x = 0; x < world.width(); x++){
+            for(int y = 0; y < world.height(); y++){
+                Tile res = world.tile(x, y);
+                if(Build.validPlace(Team.red, x, y, block, 0) && res.floor().drops != null && res.floor().drops.item == item){
+                    float dst = res.distanceTo(xp, yp);
+                    if(closest == null || dst < cdist){
+                        closest = res;
+                        cdist = dst;
+                    }
+                }
+            }
+        }
+
+        return closest;
     }
 
     private void process(Tile tile){
