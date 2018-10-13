@@ -72,13 +72,8 @@ public class PausedDialog extends FloatingDialog{
 
             content().row();
 
-            content().addButton("$text.hostserver", () -> {
-                if(!gwt){
-                    ui.host.show();
-                }else{
-                    ui.showInfo("$text.web.unsupported");
-                }
-            }).disabled(b -> Net.active());
+            content().addButton("$text.hostserver", this::hostClose)
+            .disabled(b -> Net.client()).update(t -> t.setText(Net.server() ? "$text.closeserver" : "$text.hostserver"));
 
 
             content().row();
@@ -106,14 +101,24 @@ public class PausedDialog extends FloatingDialog{
             content().row();
 
             content().addRowImageTextButton("$text.load", "icon-load", isize, load::show).disabled(b -> Net.active());
-            content().addRowImageTextButton("$text.hostserver.mobile", "icon-host", isize, ui.host::show).disabled(b -> Net.active());
-            content().addRowImageTextButton("$text.quit", "icon-quit", isize, () -> {
+            content().addRowImageTextButton("$text.hostserver.mobile", "icon-host", isize, this::hostClose)
+            .disabled(b -> Net.client()).update(t -> t.setText(Net.server() ? "$text.closeserver" : "$text.hostserver"));
+            content().addRowImageTextButton("$text.quit", "icon-quit", isize, () ->
                 ui.showConfirm("$text.confirm", "$text.quit.confirm", () -> {
                     if(Net.client()) netClient.disconnectQuietly();
                     runExitSave();
                     hide();
-                });
-            });
+                }));
+        }
+    }
+
+    void hostClose(){
+        if(gwt){
+            ui.showInfo("$text.web.unsupported");
+        }else if(Net.server()){
+            Net.closeServer();
+        }else{
+            ui.host.show();
         }
     }
 

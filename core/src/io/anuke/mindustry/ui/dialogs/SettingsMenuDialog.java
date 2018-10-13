@@ -135,6 +135,12 @@ public class SettingsMenuDialog extends SettingsDialog{
 
         game.screenshakePref();
         //game.checkPref("smoothcam", true);
+
+        if(!gwt){
+            game.checkPref("autohost", true);
+        }else{
+            Settings.defaults("autohost", false);
+        }
         game.checkPref("effects", true);
         if(mobile){
             game.checkPref("autotarget", true);

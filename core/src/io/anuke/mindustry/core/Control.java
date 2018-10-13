@@ -28,6 +28,8 @@ import io.anuke.ucore.entities.EntityQuery;
 import io.anuke.ucore.modules.Module;
 import io.anuke.ucore.util.Atlas;
 
+import java.io.IOException;
+
 import static io.anuke.mindustry.Vars.*;
 
 /**
@@ -113,6 +115,18 @@ public class Control extends Module{
                 threads.runGraphics(() -> ui.showInfo("$mode.custom.warning"));
                 Settings.putBool("custom-warning", true);
                 Settings.save();
+            }
+        });
+
+        Events.on(WorldLoadEvent.class, event -> {
+            if(!gwt && Settings.getBool("autohost")){
+                try{
+                    Net.host(port);
+                    players[0].isAdmin = true;
+                }catch(IOException e){
+                    //supress hosting errors, the player can host manually if they need to
+                    e.printStackTrace();
+                }
             }
         });
 
