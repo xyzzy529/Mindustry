@@ -27,6 +27,12 @@ public enum GameMode{
         isPvp = true;
         enemyCoreBuildRadius = 600f;
         respawnTime = 60 * 10;
+    }},
+    editor{{
+        disableWaves = true;
+        infiniteResources = true;
+        showMission = false;
+        hidden = true;
     }};
 
     public boolean infiniteResources, disableWaveTimer, disableWaves, showMission = true, hidden, enemyCheat, isPvp;
