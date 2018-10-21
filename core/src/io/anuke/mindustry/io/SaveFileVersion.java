@@ -68,6 +68,8 @@ public abstract class SaveFileVersion{
                 if(tile.entity.cons != null) tile.entity.cons.write(stream);
 
                 tile.entity.write(stream);
+                tile.entity.writeConfig(stream);
+
             }else if(tile.block() == Blocks.air){
                 int consecutives = 0;
 
@@ -114,12 +116,10 @@ public abstract class SaveFileVersion{
         short height = stream.readShort();
 
         if(world.getSector() != null){
-            world.setMap(new Map("Sector " + world.getSector().x + ", " + world.getSector().y, width, height));
+            world.setMap(new Map("Sector " + world.getSector().x + ", " + world.getSector().y));
         }else if(world.getMap() == null){
-            world.setMap(new Map("unknown", width, height));
+            world.setMap(new Map("unknown"));
         }
-
-        world.beginMapLoad();
 
         Tile[][] tiles = world.createTiles(width, height);
 
@@ -153,6 +153,7 @@ public abstract class SaveFileVersion{
                 if(tile.entity.cons != null) tile.entity.cons.read(stream);
 
                 tile.entity.read(stream);
+                tile.entity.readConfig(stream);
 
                 if(tile.block() == StorageBlocks.core){
                     state.teams.get(t).cores.add(tile);
@@ -186,7 +187,6 @@ public abstract class SaveFileVersion{
         }
 
         content.setTemporaryMapper(null);
-        world.endMapLoad();
     }
 
     public void writeEntities(DataOutputStream stream) throws IOException{

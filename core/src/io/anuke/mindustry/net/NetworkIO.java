@@ -3,17 +3,14 @@ package io.anuke.mindustry.net;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.badlogic.gdx.utils.ObjectMap.Entry;
 import com.badlogic.gdx.utils.TimeUtils;
-import io.anuke.mindustry.content.blocks.Blocks;
 import io.anuke.mindustry.entities.Player;
 import io.anuke.mindustry.game.GameMode;
 import io.anuke.mindustry.game.Team;
 import io.anuke.mindustry.game.Teams;
 import io.anuke.mindustry.game.Teams.TeamData;
 import io.anuke.mindustry.game.Version;
-import io.anuke.mindustry.maps.Map;
-import io.anuke.mindustry.maps.MapMeta;
+import io.anuke.mindustry.io.SaveIO;
 import io.anuke.mindustry.world.Tile;
-import io.anuke.mindustry.world.blocks.BlockPart;
 import io.anuke.ucore.core.Core;
 import io.anuke.ucore.core.Timers;
 import io.anuke.ucore.entities.Entities;
@@ -35,12 +32,11 @@ public class NetworkIO{
 
             //--GENERAL STATE--
             stream.writeByte(state.mode.ordinal()); //gamemode
-            stream.writeUTF(world.getMap().name); //map name
             stream.writeInt(world.getSector() == null ? invalidSector : world.getSector().packedPosition()); //sector ID
             stream.writeInt(world.getSector() == null ? 0 : world.getSector().completedMissions);
 
             //write tags
-            ObjectMap<String, String> tags = world.getMap().meta.tags;
+            ObjectMap<String, String> tags = world.getMap().tags;
             stream.writeByte(tags.size);
             for(Entry<String, String> entry : tags.entries()){
                 stream.writeUTF(entry.key);
@@ -54,69 +50,7 @@ public class NetworkIO{
             player.write(stream);
 
             //--MAP DATA--
-
-            //map size
-            stream.writeShort(world.width());
-            stream.writeShort(world.height());
-
-            for(int i = 0; i < world.width() * world.height(); i++){
-                Tile tile = world.tile(i);
-
-                stream.writeByte(tile.getFloorID());
-                stream.writeByte(tile.getBlockID());
-                stream.writeByte(tile.getElevation());
-
-                if(tile.block() instanceof BlockPart){
-                    stream.writeByte(tile.link);
-                }else if(tile.entity != null){
-                    stream.writeByte(Bits.packByte(tile.getTeamID(), tile.getRotation())); //team + rotation
-                    stream.writeShort((short) tile.entity.health); //health
-
-                    if(tile.entity.items != null) tile.entity.items.write(stream);
-                    if(tile.entity.power != null) tile.entity.power.write(stream);
-                    if(tile.entity.liquids != null) tile.entity.liquids.write(stream);
-                    if(tile.entity.cons != null) tile.entity.cons.write(stream);
-
-                    tile.entity.write(stream);
-                }else if(tile.block() == Blocks.air){
-                    int consecutives = 0;
-
-                    for(int j = i + 1; j < world.width() * world.height() && consecutives < 255; j++){
-                        Tile nextTile = world.tile(j);
-
-                        if(nextTile.getFloorID() != tile.getFloorID() || nextTile.block() != Blocks.air || nextTile.getElevation() != tile.getElevation()){
-                            break;
-                        }
-
-                        consecutives++;
-                    }
-
-                    stream.writeByte(consecutives);
-                    i += consecutives;
-                }
-            }
-
-            //write visibility, length-run encoded
-            for(int i = 0; i < world.width() * world.height(); i++){
-                Tile tile = world.tile(i);
-                boolean discovered = tile.discovered();
-
-                int consecutives = 0;
-
-                for(int j = i + 1; j < world.width() * world.height() && consecutives < 32767*2-1; j++){
-                    Tile nextTile = world.tile(j);
-
-                    if(nextTile.discovered() != discovered){
-                        break;
-                    }
-
-                    consecutives++;
-                }
-
-                stream.writeBoolean(discovered);
-                stream.writeShort(consecutives);
-                i += consecutives;
-            }
+            SaveIO.getSaveWriter().write(stream);
 
             stream.write(Team.all.length);
 
@@ -164,7 +98,6 @@ public class NetworkIO{
 
             //general state
             byte mode = stream.readByte();
-            String map = stream.readUTF();
             int sector = stream.readInt();
             int missions = stream.readInt();
 
@@ -198,73 +131,7 @@ public class NetworkIO{
             player.add();
 
             world.beginMapLoad();
-
-            //map
-            int width = stream.readShort();
-            int height = stream.readShort();
-
-            Map currentMap = new Map(map, new MapMeta(0, new ObjectMap<>(), width, height, null), true, () -> null);
-            currentMap.meta.tags.clear();
-            currentMap.meta.tags.putAll(tags);
-            world.setMap(currentMap);
-
-            Tile[][] tiles = world.createTiles(width, height);
-
-            for(int i = 0; i < width * height; i++){
-                int x = i % width, y = i / width;
-                byte floorid = stream.readByte();
-                byte wallid = stream.readByte();
-                byte elevation = stream.readByte();
-
-                Tile tile = new Tile(x, y, floorid, wallid);
-                tile.setElevation(elevation);
-
-                if(wallid == Blocks.blockpart.id){
-                    tile.link = stream.readByte();
-                }else if(tile.entity != null){
-                    byte tr = stream.readByte();
-                    short health = stream.readShort();
-
-                    byte team = Bits.getLeftByte(tr);
-                    byte rotation = Bits.getRightByte(tr);
-
-                    tile.setTeam(Team.all[team]);
-                    tile.entity.health = health;
-                    tile.setRotation(rotation);
-
-                    if(tile.entity.items != null) tile.entity.items.read(stream);
-                    if(tile.entity.power != null) tile.entity.power.read(stream);
-                    if(tile.entity.liquids != null) tile.entity.liquids.read(stream);
-                    if(tile.entity.cons != null) tile.entity.cons.read(stream);
-
-                    tile.entity.read(stream);
-                }else if(wallid == 0){
-                    int consecutives = stream.readUnsignedByte();
-
-                    for(int j = i + 1; j < i + 1 + consecutives; j++){
-                        int newx = j % width, newy = j / width;
-                        Tile newTile = new Tile(newx, newy, floorid, wallid);
-                        newTile.setElevation(elevation);
-                        tiles[newx][newy] = newTile;
-                    }
-
-                    i += consecutives;
-                }
-
-                tiles[x][y] = tile;
-            }
-
-            for(int i = 0; i < width * height; i++){
-                boolean discovered = stream.readBoolean();
-                int consecutives = stream.readUnsignedShort();
-                if(discovered){
-                    for(int j = i + 1; j < i + 1 + consecutives; j++){
-                        int newx = j % width, newy = j / width;
-                        tiles[newx][newy].setVisibility((byte) 1);
-                    }
-                }
-                i += consecutives;
-            }
+            SaveIO.getSaveWriter().readMap(stream);
 
             state.teams = new Teams();
 

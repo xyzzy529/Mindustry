@@ -93,11 +93,12 @@ public class DesktopPlatform extends Platform{
                 presence.partySize = playerGroup.size();
             }
         }else{
-            if(ui.editor != null && ui.editor.isShown()){
+            //TODO presence update
+            /*if(ui.editor != null && ui.editor.isShown()){
                 presence.state = "In Editor";
             }else{
                 presence.state = "In Menu";
-            }
+            }*/
         }
 
         presence.largeImageKey = "logo";

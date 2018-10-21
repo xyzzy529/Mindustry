@@ -297,7 +297,6 @@ public class Control extends Module{
         Platform.instance.onGameExit();
         content.dispose();
         Net.dispose();
-        ui.editor.dispose();
         inputs = new InputHandler[]{};
         players = new Player[]{};
     }

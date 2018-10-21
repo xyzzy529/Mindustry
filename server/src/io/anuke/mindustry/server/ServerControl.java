@@ -97,7 +97,7 @@ public class ServerControl extends Module{
             world.sectors.save();
             gameOvers = 0;
             inExtraRound = true;
-            Settings.putInt("sector_x", world.getSector().x + world.getSector().width);
+            Settings.putInt("sector_x", world.getSector().x + 1);
             Settings.save();
 
             Call.onInfoMessage("[accent]Sector conquered![]\n" + roundExtraTime + " seconds until deployment in next sector.");
@@ -123,7 +123,7 @@ public class ServerControl extends Module{
                         Call.onInfoMessage((state.mode.isPvp
                         ? "[YELLOW]The " + event.winner.name() + " team is victorious![]" : "[SCARLET]Game over![]")
                         + "\nNext selected map:[accent] "+map.name+"[]"
-                        + (map.meta.author() != null ? " by[accent] " + map.meta.author() + "[]" : "") + "."+
+                        + (map.author() != null ? " by[accent] " + map.author() + "[]" : "") + "."+
                         "\nNew game begins in " + roundExtraTime + " seconds.");
 
                         info("Selected next map to be {0}.", map.name);
@@ -249,7 +249,8 @@ public class ServerControl extends Module{
         handler.register("maps", "Display all available maps.", arg -> {
             info("Maps:");
             for(Map map : world.maps.all()){
-                info("  &ly{0}: &lb&fi{1} / {2}x{3}", map.name, map.custom ? "Custom" : "Default", map.meta.width, map.meta.height);
+                //TODO display map w/h
+               // info("  &ly{0}: &lb&fi{1} / {2}x{3}", map.name, map.custom ? "Custom" : "Default", map.meta.width, map.meta.height);
             }
         });
 

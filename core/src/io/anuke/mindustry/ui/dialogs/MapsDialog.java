@@ -2,12 +2,8 @@ package io.anuke.mindustry.ui.dialogs;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.utils.Scaling;
-import io.anuke.mindustry.Vars;
 import io.anuke.mindustry.core.Platform;
 import io.anuke.mindustry.maps.Map;
-import io.anuke.mindustry.io.MapIO;
-import io.anuke.mindustry.maps.MapMeta;
-import io.anuke.mindustry.maps.MapTileData;
 import io.anuke.mindustry.ui.BorderImage;
 import io.anuke.ucore.scene.event.Touchable;
 import io.anuke.ucore.scene.ui.Image;
@@ -18,8 +14,6 @@ import io.anuke.ucore.scene.utils.UIUtils;
 import io.anuke.ucore.util.Bundles;
 import io.anuke.ucore.util.Log;
 import io.anuke.ucore.util.Strings;
-
-import java.io.DataInputStream;
 
 import static io.anuke.mindustry.Vars.*;
 
@@ -33,6 +27,8 @@ public class MapsDialog extends FloatingDialog{
         buttons().addImageTextButton("$text.editor.importmap", "icon-add", 14 * 2, () -> {
             Platform.instance.showFileChooser("$text.editor.importmap", "Map File", file -> {
                 try{
+                    //TODO implement
+                    /*
                     DataInputStream stream = new DataInputStream(file.read());
                     MapMeta meta = MapIO.readMapMeta(stream);
                     MapTileData data = MapIO.readTileData(stream, meta, true);
@@ -50,7 +46,7 @@ public class MapsDialog extends FloatingDialog{
                     }else{
                         world.maps.saveMap(name, data, meta.tags);
                         setup();
-                    }
+                    }*/
 
                 }catch(Exception e){
                     ui.showError(Bundles.format("text.editor.errorimageload", Strings.parseException(e, false)));
@@ -89,7 +85,7 @@ public class MapsDialog extends FloatingDialog{
             TextButton button = maps.addButton("", "clear", () -> showMapInfo(map)).width(mapsize).pad(8).get();
             button.clearChildren();
             button.margin(6);
-            button.add(map.meta.tags.get("name", map.name)).growX().center().get().setEllipsis(true);
+            button.add(map.getDisplayName()).growX().center().get().setEllipsis(true);
             button.row();
             button.addImage("white").growX().pad(4).color(Color.GRAY);
             button.row();
@@ -129,25 +125,25 @@ public class MapsDialog extends FloatingDialog{
 
             t.add("$text.editor.name").padRight(10).color(Color.GRAY).padTop(0);
             t.row();
-            t.add(map.meta.tags.get("name", map.name)).growX().wrap().padTop(2);
+            t.add(map.getDisplayName()).growX().wrap().padTop(2);
             t.row();
             t.add("$text.editor.author").padRight(10).color(Color.GRAY);
             t.row();
-            t.add(map.meta.author()).growX().wrap().padTop(2);
+            t.add(map.author()).growX().wrap().padTop(2);
             t.row();
             t.add("$text.editor.description").padRight(10).color(Color.GRAY).top();
             t.row();
-            t.add(map.meta.description()).growX().wrap().padTop(2);
+            t.add(map.description()).growX().wrap().padTop(2);
             t.row();
             t.add("$text.editor.oregen.info").padRight(10).color(Color.GRAY);
             t.row();
-            t.add(map.meta.hasOreGen() ? "$text.on" : "$text.off").padTop(2);
+            t.add(map.hasOreGen() ? "$text.on" : "$text.off").padTop(2);
         }).height(mapsize).width(mapsize);
 
         table.row();
 
         table.addImageTextButton("$text.editor.openin", "icon-load-map", "clear", 16 * 2, () -> {
-            Vars.ui.editor.beginEditMap(map.stream.get());
+            //TODO edit the map
             dialog.hide();
             hide();
         }).fillX().height(50f).marginLeft(6);

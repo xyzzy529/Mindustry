@@ -2,7 +2,6 @@ package io.anuke.mindustry.core;
 
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.ObjectMap;
 import io.anuke.mindustry.ai.BlockIndexer;
 import io.anuke.mindustry.ai.Pathfinder;
 import io.anuke.mindustry.content.blocks.Blocks;
@@ -10,8 +9,10 @@ import io.anuke.mindustry.core.GameState.State;
 import io.anuke.mindustry.game.EventType.TileChangeEvent;
 import io.anuke.mindustry.game.EventType.WorldLoadEvent;
 import io.anuke.mindustry.game.Team;
-import io.anuke.mindustry.io.MapIO;
-import io.anuke.mindustry.maps.*;
+import io.anuke.mindustry.maps.Map;
+import io.anuke.mindustry.maps.Maps;
+import io.anuke.mindustry.maps.Sector;
+import io.anuke.mindustry.maps.Sectors;
 import io.anuke.mindustry.maps.generation.WorldGenerator;
 import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.Tile;
@@ -221,7 +222,7 @@ public class World extends Module{
 
         Tile[][] tiles = createTiles(width, height);
 
-        Map map = new Map("Sector " + sector.x + ", " + sector.y, new MapMeta(0, new ObjectMap<>(), width, height, null), true, () -> null);
+        Map map = new Map("Sector " + sector.x + ", " + sector.y);
         setMap(map);
 
         EntityQuery.resizeTree(0, 0, width * tilesize, height * tilesize);
@@ -236,14 +237,15 @@ public class World extends Module{
         beginMapLoad();
         this.currentMap = map;
 
-        int width = map.meta.width, height = map.meta.height;
+        //int width = map.meta.width, height = map.meta.height;
 
-        createTiles(width, height);
+        //createTiles(width, height);
 
-        EntityQuery.resizeTree(0, 0, width * tilesize, height * tilesize);
+        //EntityQuery.resizeTree(0, 0, width * tilesize, height * tilesize);
 
         try{
-            generator.loadTileData(tiles, MapIO.readTileData(map, true), map.meta.hasOreGen(), 0);
+            //TODO load the map.
+            //generator.loadTileData(tiles, MapIO.readTileData(map, true), map.meta.hasOreGen(), 0);
         } catch(Exception e){
             Log.err(e);
             if(!headless){

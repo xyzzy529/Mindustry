@@ -49,7 +49,9 @@ public class Save16 extends SaveFileVersion{
 
         readEntities(stream);
 
+        world.beginMapLoad();
         readMap(stream);
+        world.endMapLoad();
     }
 
     @Override

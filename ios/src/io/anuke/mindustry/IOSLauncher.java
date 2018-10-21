@@ -151,11 +151,7 @@ public class IOSLauncher extends IOSApplication.Delegate {
 
             }else if(file.extension().equalsIgnoreCase(mapExtension)){ //open map
                 Gdx.app.postRunnable(() -> {
-                    if (!ui.editor.isShown()) {
-                        ui.editor.show();
-                    }
-
-                    ui.editor.beginEditMap(file.read());
+                    //TODO show editor
                 });
             }
         });

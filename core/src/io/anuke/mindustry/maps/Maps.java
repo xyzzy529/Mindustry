@@ -2,18 +2,18 @@ package io.anuke.mindustry.maps;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Base64Coder;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.ObjectMap;
-import io.anuke.mindustry.io.MapIO;
 import io.anuke.ucore.core.Settings;
 import io.anuke.ucore.function.Supplier;
 import io.anuke.ucore.util.Log;
 import io.anuke.ucore.util.ThreadArray;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 import static io.anuke.mindustry.Vars.*;
 
@@ -74,7 +74,7 @@ public class Maps implements Disposable{
         loadCustomMaps();
     }
 
-    /**Save a map. This updates all values and stored data necessary.*/
+    /**Save a map. This updates all values and stored data necessary.
     public void saveMap(String name, MapTileData data, ObjectMap<String, String> tags){
         try {
             //create copy of tags to prevent mutation later
@@ -114,7 +114,7 @@ public class Maps implements Disposable{
         }catch (IOException e){
             throw new RuntimeException(e);
         }
-    }
+    }*/
 
     /**Removes a map completely.*/
     public void removeMap(Map map){
@@ -137,6 +137,8 @@ public class Maps implements Disposable{
     }
 
     private void loadMap(String name, Supplier<InputStream> supplier, boolean custom) throws IOException{
+        //TODO implement
+        /*
         try(DataInputStream ds = new DataInputStream(supplier.get())) {
             MapMeta meta = MapIO.readMapMeta(ds);
             Map map = new Map(name, meta, custom, supplier);
@@ -147,7 +149,7 @@ public class Maps implements Disposable{
 
             maps.put(map.name.toLowerCase(), map);
             allMaps.add(map);
-        }
+        }*/
     }
 
     private void loadCustomMaps(){

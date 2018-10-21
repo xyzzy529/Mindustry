@@ -11,8 +11,6 @@ import io.anuke.mindustry.content.blocks.OreBlocks;
 import io.anuke.mindustry.content.blocks.StorageBlocks;
 import io.anuke.mindustry.game.Team;
 import io.anuke.mindustry.maps.Map;
-import io.anuke.mindustry.maps.MapTileData;
-import io.anuke.mindustry.maps.MapTileData.TileDataMarker;
 import io.anuke.mindustry.maps.Sector;
 import io.anuke.mindustry.maps.missions.Mission;
 import io.anuke.mindustry.type.Item;
@@ -51,24 +49,6 @@ public class WorldGenerator{
             Blocks.snow, Blocks.icerock,
             Blocks.blackstone, Blocks.blackrock
         );
-    }
-
-    /**Loads raw map tile data into a Tile[][] array, setting up multiblocks, cliffs and ores. */
-    public void loadTileData(Tile[][] tiles, MapTileData data, boolean genOres, int seed){
-        data.position(0, 0);
-        TileDataMarker marker = data.newDataMarker();
-
-        for(int y = 0; y < data.height(); y++){
-            for(int x = 0; x < data.width(); x++){
-                data.read(marker);
-
-                tiles[x][y] = new Tile(x, y, marker.floor, marker.wall == Blocks.blockpart.id ? 0 : marker.wall, marker.rotation, marker.team, marker.elevation);
-            }
-        }
-
-        prepareTiles(tiles);
-
-        generateOres(tiles, seed, genOres, null);
     }
 
     /**'Prepares' a tile array by:<br>
@@ -160,7 +140,7 @@ public class WorldGenerator{
             }
 
             Tile[][] tiles = world.createTiles(width, height);
-            world.setMap(new Map("Generated Map", width, height));
+            world.setMap(new Map("Generated Map"));
             world.beginMapLoad();
 
             for(int x = 0; x < width; x++){

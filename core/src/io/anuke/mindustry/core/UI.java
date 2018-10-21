@@ -6,7 +6,6 @@ import com.badlogic.gdx.graphics.Colors;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.utils.Align;
 import io.anuke.mindustry.Vars;
-import io.anuke.mindustry.editor.MapEditorDialog;
 import io.anuke.mindustry.game.EventType.ResizeEvent;
 import io.anuke.mindustry.graphics.Palette;
 import io.anuke.mindustry.input.InputHandler;
@@ -49,7 +48,6 @@ public class UI extends SceneModule{
     public PausedDialog paused;
     public SettingsMenuDialog settings;
     public ControlsDialog controls;
-    public MapEditorDialog editor;
     public LanguageDialog language;
     public BansDialog bans;
     public AdminsDialog admins;
@@ -142,7 +140,6 @@ public class UI extends SceneModule{
 
     @Override
     public void init(){
-        editor = new MapEditorDialog();
         controls = new ControlsDialog();
         restart = new RestartDialog();
         join = new JoinDialog();

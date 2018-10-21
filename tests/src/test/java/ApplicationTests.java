@@ -200,8 +200,10 @@ public class ApplicationTests{
         SaveIO.loadFromSlot(0);
 
         assertEquals(world.getMap(), map);
-        assertEquals(world.width(), map.meta.width);
-        assertEquals(world.height(), map.meta.height);
+        //TODO fix
+        throw new RuntimeException("aaaaaaaa fail");
+        //assertEquals(world.width(), map.meta.width);
+        //assertEquals(world.height(), map.meta.height);
     }
 
     @Test

@@ -213,10 +213,7 @@ public class AndroidLauncher extends PatchedAndroidApplication{
                     }else if(map){ //open map
                         Gdx.app.postRunnable(() -> {
                             System.out.println("Opening map.");
-                            if(!ui.editor.isShown()){
-                                ui.editor.show();
-                            }
-                            ui.editor.beginEditMap(inStream);
+                            //TODO show map editor
                         });
                     }
                 });

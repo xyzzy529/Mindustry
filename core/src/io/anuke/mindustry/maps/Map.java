@@ -12,24 +12,36 @@ public class Map{
     /** Whether this is a custom map.*/
     public final boolean custom;
     /** Metadata. Author description, display name, etc.*/
-    public final MapMeta meta;
+    public final ObjectMap<String, String> tags;
     /** Supplies a new input stream with the data of this map.*/
     public final Supplier<InputStream> stream;
     /** Preview texture.*/
     public Texture texture;
 
-    public Map(String name, MapMeta meta, boolean custom, Supplier<InputStream> streamSupplier){
+    public Map(String name, ObjectMap<String, String> tags, boolean custom, Supplier<InputStream> streamSupplier){
         this.name = name;
         this.custom = custom;
-        this.meta = meta;
+        this.tags = tags;
         this.stream = streamSupplier;
     }
 
-    public Map(String unknownName, int width, int height){
-        this(unknownName, new MapMeta(0, new ObjectMap<>(), width, height, null), true, () -> null);
+    public Map(String unknownName){
+        this(unknownName, new ObjectMap<>(), true, () -> null);
+    }
+
+    public String description(){
+        return tags.get("description", "");
+    }
+
+    public String author(){
+        return tags.get("author", "");
+    }
+
+    public boolean hasOreGen(){
+        return tags.get("oregen", "0").equals("1");
     }
 
     public String getDisplayName(){
-        return meta.tags.get("name", name);
+        return tags.get("name", name);
     }
 }
