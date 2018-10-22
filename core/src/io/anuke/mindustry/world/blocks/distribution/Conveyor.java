@@ -158,7 +158,7 @@ public class Conveyor extends Block{
                 if(pos.item == null) continue;
 
                 tr1.trns(rotation * 90, tilesize, 0);
-                tr2.trns(rotation * 90, -tilesize / 2, pos.x * tilesize / 2);
+                tr2.trns(rotation * 90, -tilesize / 2f, pos.x * tilesize / 2);
 
                 Draw.rect(pos.item.region,
                         (int) (tile.x * tilesize + tr1.x * pos.y + tr2.x),
@@ -395,30 +395,27 @@ public class Conveyor extends Block{
 
         @Override
         public void write(DataOutputStream stream) throws IOException{
-            stream.writeInt(convey.size);
+            stream.writeByte(convey.size);
 
             for(int i = 0; i < convey.size; i++){
-                stream.writeInt(ItemPos.toInt(convey.get(i)));
+                stream.writeLong(convey.get(i));
             }
         }
 
         @Override
         public void read(DataInputStream stream) throws IOException{
             convey.clear();
-            int amount = stream.readInt();
+            int amount = stream.readByte();
             convey.ensureCapacity(amount);
 
             for(int i = 0; i < amount; i++){
-                convey.add(ItemPos.toLong(stream.readInt()));
+                convey.add(stream.readLong());
             }
         }
     }
 
     //Container class. Do not instantiate.
     static class ItemPos{
-        private static short[] writeShort = new short[4];
-        private static byte[] writeByte = new byte[4];
-
         private static short[] packShorts = new short[4];
         private static short[] drawShorts = new short[4];
         private static short[] updateShorts = new short[4];
@@ -433,39 +430,6 @@ public class Conveyor extends Block{
         static long packItem(Item item, float x, float y, byte seed){
             short[] shorts = packShorts;
             shorts[0] = (short) item.id;
-            shorts[1] = (short) (x * Short.MAX_VALUE);
-            shorts[2] = (short) ((y - 1f) * Short.MAX_VALUE);
-            shorts[3] = seed;
-            return Bits.packLong(shorts);
-        }
-
-        static int toInt(long value){
-            short[] values = Bits.getShorts(value, writeShort);
-
-            short itemid = values[0];
-            float x = values[1] / (float) Short.MAX_VALUE;
-            float y = ((float) values[2]) / Short.MAX_VALUE + 1f;
-            byte seed = (byte) values[3];
-
-            byte[] bytes = writeByte;
-            bytes[0] = (byte) itemid;
-            bytes[1] = (byte) (x * 127);
-            bytes[2] = (byte) (y * 255 - 128);
-            bytes[3] = seed;
-
-            return Bits.packInt(bytes);
-        }
-
-        static long toLong(int value){
-            byte[] values = Bits.getBytes(value, writeByte);
-
-            byte itemid = values[0];
-            float x = values[1] / 127f;
-            float y = ((int) values[2] + 128) / 255f;
-            byte seed = values[3];
-
-            short[] shorts = writeShort;
-            shorts[0] = (short) itemid;
             shorts[1] = (short) (x * Short.MAX_VALUE);
             shorts[2] = (short) ((y - 1f) * Short.MAX_VALUE);
             shorts[3] = seed;
