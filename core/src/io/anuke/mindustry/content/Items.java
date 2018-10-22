@@ -74,6 +74,8 @@ public class Items implements ContentList{
         phasematter = new Item("phase-matter", Color.valueOf("f4ba6e")){{
             type = ItemType.material;
             cost = 1.5f;
+            fluxiness = 0.9f;
+            radioactivity = 0.3f;
         }};
 
         surgealloy = new Item("surge-alloy", Color.valueOf("f3e979")){{
@@ -82,7 +84,7 @@ public class Items implements ContentList{
 
         biomatter = new Item("biomatter", Color.valueOf("648b55")){{
             flammability = 0.4f;
-            fluxiness = 0.2f;
+            fluxiness = 0.3f;
         }};
 
         sand = new Item("sand", Color.valueOf("e3d39e")){{

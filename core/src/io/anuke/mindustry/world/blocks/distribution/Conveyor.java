@@ -35,7 +35,6 @@ public class Conveyor extends Block{
     private TextureRegion[][] regions = new TextureRegion[7][4];
 
     protected float speed = 0f;
-    protected float carryCapacity = 8f;
 
     protected Conveyor(String name){
         super(name);
@@ -195,6 +194,16 @@ public class Conveyor extends Block{
         if(entity.convey.size * itemSpace < 0.9f){
             unit.getVelocity().add((tx * speed + centerx) * entity.delta(), (ty * speed + centery) * entity.delta());
         }
+    }
+
+    @Override
+    public void onProximityAdded(Tile tile){
+        super.onProximityAdded(tile);
+    }
+
+    @Override
+    public void onProximityRemoved(Tile tile){
+        super.onProximityRemoved(tile);
     }
 
     @Override
@@ -372,6 +381,7 @@ public class Conveyor extends Block{
     }
 
     public static class ConveyorEntity extends TileEntity{
+        ConveyorLine line = new ConveyorLine();
 
         LongArray convey = new LongArray();
         byte lastInserted;
