@@ -24,6 +24,7 @@ import io.anuke.mindustry.type.ItemStack;
 import io.anuke.mindustry.type.Recipe;
 import io.anuke.mindustry.ui.dialogs.FloatingDialog;
 import io.anuke.ucore.core.*;
+import io.anuke.ucore.entities.Entities;
 import io.anuke.ucore.entities.EntityQuery;
 import io.anuke.ucore.modules.Module;
 import io.anuke.ucore.util.Atlas;
@@ -361,6 +362,12 @@ public class Control extends Module{
         if(!state.is(State.menu)){
             for(InputHandler input : inputs){
                 input.update();
+            }
+
+            //these are only effects, which are safe to update in the render thread
+            if(!state.is(State.paused) || Net.active()){
+                Entities.update(effectGroup);
+                Entities.update(groundEffectGroup);
             }
 
             //auto-update rpc every 5 seconds
