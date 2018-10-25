@@ -50,12 +50,12 @@ public class AI{
         if(core.items.has(Recipe.getByResult(drillBlock).requirements)){
             return new BuildBlockTask(getClosestDrillReq(drone));
         }else{
-            return new MineTask(world.indexer().findClosestOre(drone.x, drone.y, Items.copper), 60f*10f);
+            return new MineTask(world.indexer.findClosestOre(drone.x, drone.y, Items.copper), 60f*10f);
         }
     }
 
     BuildRequest getClosestDrillReq(WorkerDrone drone){
-        Tile tile = world.indexer().findClosestOre(drone.x, drone.y, Items.copper, drillBlock);
+        Tile tile = world.indexer.findClosestOre(drone.x, drone.y, Items.copper, drillBlock);
         return new BuildRequest(tile.x, tile.y, 0, Recipe.getByResult(ProductionBlocks.mechanicalDrill));
     }
 

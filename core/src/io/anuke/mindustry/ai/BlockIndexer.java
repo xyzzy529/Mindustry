@@ -176,7 +176,7 @@ public class BlockIndexer{
     }
 
     public Tile findClosestOre(float xp, float yp, Item item, Block block){
-        Tile tile = Geometry.findClosest(xp, yp, world.indexer().getOrePositions(item));
+        Tile tile = Geometry.findClosest(xp, yp, getOrePositions(item));
 
         Tile closest = null;
         float cdist = 0f;
