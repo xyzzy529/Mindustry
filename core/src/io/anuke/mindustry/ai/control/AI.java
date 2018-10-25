@@ -55,7 +55,7 @@ public class AI{
     }
 
     BuildRequest getClosestDrillReq(WorkerDrone drone){
-        Tile tile = world.indexer.findClosestOre(drone.x, drone.y, Items.copper, drillBlock);
+        Tile tile = world.indexer.findClosestOre(drone.x, drone.y, Items.copper, drillBlock, team);
         return new BuildRequest(tile.x, tile.y, 0, Recipe.getByResult(ProductionBlocks.mechanicalDrill));
     }
 

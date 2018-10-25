@@ -175,28 +175,22 @@ public class BlockIndexer{
         return null;
     }
 
-    public Tile findClosestOre(float xp, float yp, Item item, Block block){
-        Tile tile = Geometry.findClosest(xp, yp, getOrePositions(item));
-
-        Tile closest = null;
-        float cdist = 0f;
+    public Tile findClosestOre(float xp, float yp, Item item, Block block, Team team){
+        Tile tile = Geometry.findClosest(xp, yp, world.indexer.getOrePositions(item));
 
         if(tile == null) return null;
 
-        for(int x = 0; x < world.width(); x++){
-            for(int y = 0; y < world.height(); y++){
+        for(int x = Math.max(0, tile.x - oreQuadrantSize / 2); x < tile.x + oreQuadrantSize / 2 && x < world.width(); x++){
+            for(int y = Math.max(0, tile.y - oreQuadrantSize / 2); y < tile.y + oreQuadrantSize / 2 && y < world.height(); y++){
                 Tile res = world.tile(x, y);
-                if(Build.validPlace(Team.red, x, y, block, 0) && res.floor().drops != null && res.floor().drops.item == item){
-                    float dst = res.distanceTo(xp, yp);
-                    if(closest == null || dst < cdist){
-                        closest = res;
-                        cdist = dst;
-                    }
+                if(res.block() == Blocks.air && res.floor().drops != null && res.floor().drops.item == item &&
+                        Build.validPlace(team, x, y, block, 0)){
+                    return res;
                 }
             }
         }
 
-        return closest;
+        return null;
     }
 
     private void process(Tile tile){
