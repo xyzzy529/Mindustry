@@ -16,6 +16,7 @@ import io.anuke.mindustry.entities.effect.Lightning;
 import io.anuke.mindustry.game.ContentList;
 import io.anuke.mindustry.graphics.Palette;
 import io.anuke.mindustry.world.Tile;
+import io.anuke.mindustry.world.blocks.BuildBlock;
 import io.anuke.mindustry.world.blocks.distribution.MassDriver.DriverBulletData;
 import io.anuke.ucore.core.Effects;
 import io.anuke.ucore.core.Timers;
@@ -27,10 +28,19 @@ import static io.anuke.mindustry.Vars.content;
 import static io.anuke.mindustry.Vars.world;
 
 public class TurretBullets extends BulletList implements ContentList{
-    public static BulletType fireball, basicFlame, lancerLaser, burstLaser, meltdownLaser, fuseShot, waterShot, cryoShot, lavaShot, oilShot, lightning, driverBolt, healBullet, arc;
+    public static BulletType fireball, basicFlame, lancerLaser, burstLaser, meltdownLaser,
+        fuseShot, waterShot, cryoShot, lavaShot, oilShot, lightning, driverBolt, healBullet, arc, damageLightning;
 
     @Override
     public void load(){
+
+        damageLightning = new BulletType(0.0001f, 0f){
+            {
+                lifetime = Lightning.lifetime;
+                hiteffect = BulletFx.hitLancer;
+                despawneffect = Fx.none;
+            }
+        };
 
         healBullet = new BulletType(5.2f, 13){
             float healAmount = 21f;
@@ -54,11 +64,11 @@ public class TurretBullets extends BulletList implements ContentList{
             @Override
             public void hitTile(Bullet b, Tile tile){
                 super.hit(b);
+                tile = tile.target();
 
-                if(tile.getTeam() == b.getTeam()){
+                if(tile.getTeam() == b.getTeam() && !(tile.block() instanceof BuildBlock)){
                     Effects.effect(BlockFx.healBlock, tile.drawx(), tile.drawy(), tile.block().size);
-                    tile.entity.health += healAmount;
-                    tile.entity.health = Mathf.clamp(tile.entity.health, 0, tile.block().health);
+                    tile.entity.healBy(healAmount);
                 }
             }
         };
@@ -276,11 +286,12 @@ public class TurretBullets extends BulletList implements ContentList{
             }
         };
 
-        lightning = new BulletType(0.001f, 14){
+        lightning = new BulletType(0.001f, 12f){
             {
-                lifetime = 1;
+                lifetime = 1f;
                 despawneffect = Fx.none;
                 hiteffect = BulletFx.hitLancer;
+                keepVelocity = false;
             }
 
             @Override
@@ -289,11 +300,11 @@ public class TurretBullets extends BulletList implements ContentList{
 
             @Override
             public void init(Bullet b){
-                Lightning.create(b.getTeam(), hiteffect, Palette.lancerLaser, damage, b.x, b.y, b.angle(), 30);
+                Lightning.create(b.getTeam(), Palette.lancerLaser, damage, b.x, b.y, b.angle(), 30);
             }
         };
 
-        arc = new BulletType(0.001f, 7){
+        arc = new BulletType(0.001f, 30){
             {
                 lifetime = 1;
                 despawneffect = Fx.none;
@@ -306,7 +317,7 @@ public class TurretBullets extends BulletList implements ContentList{
 
             @Override
             public void init(Bullet b){
-                Lightning.create(b.getTeam(), hiteffect, Palette.lancerLaser, damage, b.x, b.y, b.angle(), 25);
+                Lightning.create(b.getTeam(), Palette.lancerLaser, damage, b.x, b.y, b.angle(), 36);
             }
         };
 

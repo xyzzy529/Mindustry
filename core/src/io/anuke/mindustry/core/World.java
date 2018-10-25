@@ -12,9 +12,9 @@ import io.anuke.mindustry.game.EventType.WorldLoadEvent;
 import io.anuke.mindustry.game.Team;
 import io.anuke.mindustry.io.MapIO;
 import io.anuke.mindustry.maps.*;
+import io.anuke.mindustry.maps.generation.WorldGenerator;
 import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.Tile;
-import io.anuke.mindustry.maps.generation.WorldGenerator;
 import io.anuke.mindustry.world.blocks.OreBlock;
 import io.anuke.ucore.core.Events;
 import io.anuke.ucore.core.Timers;
@@ -28,12 +28,12 @@ public class World extends Module{
     public final Maps maps = new Maps();
     public final Sectors sectors = new Sectors();
     public final WorldGenerator generator = new WorldGenerator();
+    public final BlockIndexer indexer = new BlockIndexer();
+    public final Pathfinder pathfinder = new Pathfinder();
 
     private Map currentMap;
     private Sector currentSector;
     private Tile[][] tiles;
-    private Pathfinder pathfinder = new Pathfinder();
-    private BlockIndexer indexer = new BlockIndexer();
 
     private Array<Tile> tempTiles = new ThreadArray<>();
     private boolean generating, invalidMap;
@@ -50,26 +50,6 @@ public class World extends Module{
     @Override
     public void dispose(){
         maps.dispose();
-    }
-
-    public WorldGenerator generator(){
-        return generator;
-    }
-
-    public Sectors sectors(){
-        return sectors;
-    }
-
-    public Maps maps(){
-        return maps;
-    }
-
-    public BlockIndexer indexer(){
-        return indexer;
-    }
-
-    public Pathfinder pathfinder(){
-        return pathfinder;
     }
 
     public boolean isInvalidMap(){
@@ -95,11 +75,6 @@ public class World extends Module{
 
     public boolean isAccessible(int x, int y){
         return !wallSolid(x, y - 1) || !wallSolid(x, y + 1) || !wallSolid(x - 1, y) || !wallSolid(x + 1, y);
-    }
-
-    public boolean floorBlends(int x, int y, Block block){
-        Tile tile = tile(x, y);
-        return tile == null || tile.floor().id <= block.id;
     }
 
     public Map getMap(){
@@ -234,6 +209,7 @@ public class World extends Module{
     public void loadSector(Sector sector){
         currentSector = sector;
         state.difficulty = sectors.getDifficulty(sector);
+        state.mode = sector.currentMission().getMode();
         Timers.mark();
         Timers.mark();
 
@@ -241,7 +217,7 @@ public class World extends Module{
 
         beginMapLoad();
 
-        int width = sectorSize * sector.width, height = sectorSize * sector.height;
+        int width = sectorSize, height = sectorSize;
 
         Tile[][] tiles = createTiles(width, height);
 
@@ -279,15 +255,29 @@ public class World extends Module{
             return;
         }
 
-        if(!headless && state.teams.get(players[0].getTeam()).cores.size == 0){
-            ui.showError("$text.map.nospawn");
-            threads.runDelay(() -> state.set(State.menu));
-            invalidMap = true;
+        endMapLoad();
+
+        if(!headless){
+            if(state.teams.get(players[0].getTeam()).cores.size == 0){
+                ui.showError("$text.map.nospawn");
+                invalidMap = true;
+            }else if(state.mode.isPvp){
+                invalidMap = true;
+                for(Team team : Team.all){
+                    if(state.teams.get(team).cores.size != 0 && team != players[0].getTeam()){
+                        invalidMap = false;
+                    }
+                }
+                if(invalidMap){
+                    ui.showError("$text.map.nospawn.pvp");
+                }
+            }
         }else{
             invalidMap = false;
         }
 
-        endMapLoad();
+        if(invalidMap) threads.runDelay(() -> state.set(State.menu));
+
     }
 
     public void notifyChanged(Tile tile){

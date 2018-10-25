@@ -20,7 +20,6 @@ import io.anuke.mindustry.graphics.Shaders;
 import io.anuke.mindustry.maps.TutorialSector;
 import io.anuke.mindustry.net.Net;
 import io.anuke.mindustry.type.Item;
-import io.anuke.mindustry.type.ItemType;
 import io.anuke.mindustry.world.BarType;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.world.meta.BlockFlag;
@@ -36,9 +35,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import static io.anuke.mindustry.Vars.state;
-import static io.anuke.mindustry.Vars.unitGroups;
-import static io.anuke.mindustry.Vars.waveTeam;
+import static io.anuke.mindustry.Vars.*;
 
 public class CoreBlock extends StorageBlock{
     protected float droneRespawnDuration = 60 * 6;
@@ -75,17 +72,21 @@ public class CoreBlock extends StorageBlock{
         entity.currentUnit.setNet(tile.drawx(), tile.drawy());
         entity.currentUnit.add();
         entity.currentUnit = null;
+
+        if(player instanceof Player){
+            ((Player) player).endRespawning();
+        }
     }
 
     @Remote(called = Loc.server)
     public static void setCoreSolid(Tile tile, boolean solid){
+        if(tile == null) return;
         CoreEntity entity = tile.entity();
         if(entity != null) entity.solid = solid;
     }
 
     @Override
     public void onProximityUpdate(Tile tile) {
-        //add cores
         state.teams.get(tile.getTeam()).cores.add(tile);
     }
 
@@ -164,25 +165,6 @@ public class CoreBlock extends StorageBlock{
     }
 
     @Override
-    public int acceptStack(Item item, int amount, Tile tile, Unit source){
-        if(acceptItem(item, tile, tile) && hasItems && (source == null || source.getTeam() == tile.getTeam())){
-            return Math.min(itemCapacity - tile.entity.items.get(item), amount);
-        }else{
-            return 0;
-        }
-    }
-
-    @Override
-    public int getMaximumAccepted(Tile tile, Item item){
-        return itemCapacity;
-    }
-
-    @Override
-    public boolean acceptItem(Item item, Tile tile, Tile source){
-        return tile.entity.items.get(item) < itemCapacity && item.type == ItemType.material;
-    }
-
-    @Override
     public void handleItem(Item item, Tile tile, Tile source){
         if(Net.server() || !Net.active()) super.handleItem(item, tile, source);
     }
@@ -207,7 +189,7 @@ public class CoreBlock extends StorageBlock{
             if(entity.progress >= 1f){
                 Call.onUnitRespawn(tile, entity.currentUnit);
             }
-        }else{
+        }else if(!netServer.isWaitingForPlayers()){
             entity.warmup += Timers.delta();
 
             if(entity.solid && entity.warmup > 60f && !Net.client()){
@@ -243,7 +225,7 @@ public class CoreBlock extends StorageBlock{
         return new CoreEntity();
     }
 
-    public class CoreEntity extends TileEntity implements SpawnerTrait{
+    public class CoreEntity extends StorageEntity implements SpawnerTrait{
         public Unit currentUnit;
         Array<Unit> drones;
         boolean solid = true;
@@ -254,7 +236,7 @@ public class CoreBlock extends StorageBlock{
 
         @Override
         public void updateSpawning(Unit unit){
-            if(currentUnit == null){
+            if(!netServer.isWaitingForPlayers() && currentUnit == null){
                 currentUnit = unit;
                 progress = 0f;
                 unit.set(tile.drawx(), tile.drawy());

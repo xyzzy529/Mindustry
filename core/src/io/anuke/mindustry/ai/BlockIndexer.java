@@ -15,7 +15,6 @@ import io.anuke.mindustry.world.Build;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.world.meta.BlockFlag;
 import io.anuke.ucore.core.Events;
-import io.anuke.ucore.entities.trait.Entity;
 import io.anuke.ucore.function.Predicate;
 import io.anuke.ucore.util.EnumSet;
 import io.anuke.ucore.util.Geometry;
@@ -28,6 +27,7 @@ import static io.anuke.mindustry.Vars.*;
 //TODO maybe use Arrays instead of ObjectSets?
 
 /**Class used for indexing special target blocks for AI.*/
+@SuppressWarnings("unchecked")
 public class BlockIndexer{
     /**Size of one ore quadrant.*/
     private final static int oreQuadrantSize = 20;
@@ -118,7 +118,7 @@ public class BlockIndexer{
     }
 
     public TileEntity findTile(Team team, float x, float y, float range, Predicate<Tile> pred){
-        Entity closest = null;
+        TileEntity closest = null;
         float dst = 0;
 
         for(int rx = Math.max((int) ((x - range) / tilesize / structQuadrantSize), 0); rx <= (int) ((x + range) / tilesize / structQuadrantSize) && rx < quadWidth(); rx++){
@@ -144,7 +144,7 @@ public class BlockIndexer{
             }
         }
 
-        return (TileEntity) closest;
+        return closest;
     }
 
     /**
@@ -157,11 +157,9 @@ public class BlockIndexer{
         return ores.get(item, emptySet);
     }
 
-    /**
-     * Find the closest ore block relative to a position.
-     */
+    /**Find the closest ore block relative to a position.*/
     public Tile findClosestOre(float xp, float yp, Item item){
-        Tile tile = Geometry.findClosest(xp, yp, world.indexer().getOrePositions(item));
+        Tile tile = Geometry.findClosest(xp, yp, world.indexer.getOrePositions(item));
 
         if(tile == null) return null;
 

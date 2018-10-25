@@ -4,6 +4,7 @@ import com.badlogic.gdx.math.Vector2;
 import io.anuke.annotations.Annotations.Loc;
 import io.anuke.annotations.Annotations.Remote;
 import io.anuke.mindustry.entities.Unit;
+import io.anuke.mindustry.entities.effect.Lightning;
 import io.anuke.mindustry.entities.traits.AbsorbTrait;
 import io.anuke.mindustry.entities.traits.SyncTrait;
 import io.anuke.mindustry.entities.traits.TeamTrait;
@@ -96,6 +97,7 @@ public class Bullet extends BulletEntity<BulletType> implements TeamTrait, SyncT
         supressOnce = true;
     }
 
+    @Override
     public void absorb(){
         supressCollision = true;
         remove();
@@ -131,6 +133,10 @@ public class Bullet extends BulletEntity<BulletType> implements TeamTrait, SyncT
     public float getDamage(){
         if(owner instanceof Unit){
             return super.getDamage() * ((Unit) owner).getDamageMultipler();
+        }
+
+        if(owner instanceof Lightning && data instanceof Float){
+            return (Float)data;
         }
 
         return super.getDamage();
@@ -204,7 +210,9 @@ public class Bullet extends BulletEntity<BulletType> implements TeamTrait, SyncT
                 tile = tile.target();
 
                 if(tile.entity != null && tile.entity.collide(this) && !tile.entity.isDead() && (type.collidesTeam || tile.getTeam() != team)){
-                    tile.entity.collision(this);
+                    if(tile.getTeam() != team){
+                        tile.entity.collision(this);
+                    }
 
                     if(!supressCollision){
                         type.hitTile(this, tile);

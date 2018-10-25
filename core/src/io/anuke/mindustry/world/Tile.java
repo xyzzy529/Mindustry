@@ -10,7 +10,7 @@ import io.anuke.mindustry.game.Team;
 import io.anuke.mindustry.world.blocks.BlockPart;
 import io.anuke.mindustry.world.blocks.Floor;
 import io.anuke.mindustry.world.modules.ConsumeModule;
-import io.anuke.mindustry.world.modules.InventoryModule;
+import io.anuke.mindustry.world.modules.ItemModule;
 import io.anuke.mindustry.world.modules.LiquidModule;
 import io.anuke.mindustry.world.modules.PowerModule;
 import io.anuke.ucore.entities.trait.PosTrait;
@@ -260,7 +260,7 @@ public class Tile implements PosTrait, TargetTrait{
     }
 
     public boolean isEnemyCheat(){
-        return getTeam() == waveTeam && state.mode.enemyCheat;
+        return getTeam() == waveTeam && !state.mode.isPvp;
     }
 
     public boolean isLinked(){
@@ -390,8 +390,13 @@ public class Tile implements PosTrait, TargetTrait{
                 cliffs |= (1 << (i * 2));
             }
         }
+
         if(occluded){
             cost += 1;
+        }
+
+        if(floor.isLiquid){
+            cost += 100f;
         }
     }
 
@@ -418,16 +423,17 @@ public class Tile implements PosTrait, TargetTrait{
             if(block.hasEntity()){
                 entity = block.newEntity().init(this, block.update);
                 entity.cons = new ConsumeModule();
-                if(block.hasItems) entity.items = new InventoryModule();
+                if(block.hasItems) entity.items = new ItemModule();
                 if(block.hasLiquids) entity.liquids = new LiquidModule();
                 if(block.hasPower){
                     entity.power = new PowerModule();
                     entity.power.graph.add(this);
                 }
+
                 if(!world.isGenerating()){
                     entity.updateProximity();
                 }
-            }else if(!(block instanceof BlockPart)){
+            }else if(!(block instanceof BlockPart) && !world.isGenerating()){
                 //since the entity won't update proximity for us, update proximity for all nearby tiles manually
                 for(GridPoint2 p : Geometry.d4){
                     Tile tile = world.tile(x + p.x, y + p.y);

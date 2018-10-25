@@ -5,10 +5,10 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.utils.ObjectIntMap;
 import io.anuke.mindustry.content.fx.Fx;
 import io.anuke.mindustry.core.GameState.State;
 import io.anuke.mindustry.entities.Player;
+import io.anuke.mindustry.entities.TileEntity;
 import io.anuke.mindustry.entities.Unit;
 import io.anuke.mindustry.entities.effect.GroundEffectEntity;
 import io.anuke.mindustry.entities.effect.GroundEffectEntity.GroundEffect;
@@ -16,9 +16,7 @@ import io.anuke.mindustry.entities.traits.BelowLiquidTrait;
 import io.anuke.mindustry.entities.units.BaseUnit;
 import io.anuke.mindustry.game.Team;
 import io.anuke.mindustry.graphics.*;
-import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.world.blocks.defense.ForceProjector.ShieldEntity;
-import io.anuke.mindustry.world.meta.BlockFlag;
 import io.anuke.ucore.core.Core;
 import io.anuke.ucore.core.Effects;
 import io.anuke.ucore.core.Graphics;
@@ -146,7 +144,12 @@ public class Renderer extends RendererModule{
             Vector2 position = averagePosition();
 
             if(players[0].isDead()){
-                smoothCamera(position.x + 0.0001f, position.y + 0.0001f, 0.08f);
+                TileEntity core = players[0].getClosestCore();
+                if(core != null && players[0].spawner == -1){
+                    smoothCamera(core.x, core.y, 0.08f);
+                }else{
+                    smoothCamera(position.x + 0.0001f, position.y + 0.0001f, 0.08f);
+                }
             }else if(!mobile){
                 setCamera(position.x + 0.0001f, position.y + 0.0001f);
             }
@@ -244,16 +247,20 @@ public class Renderer extends RendererModule{
 
         overlays.drawBottom();
         drawAndInterpolate(playerGroup, p -> true, Player::drawBuildRequests);
-        overlays.drawTop();
 
         Shaders.shield.color.set(Palette.accent);
-
         Graphics.beginShaders(Shaders.shield);
         EntityDraw.draw(shieldGroup);
         EntityDraw.drawWith(shieldGroup, shield -> true, shield -> ((ShieldEntity)shield).drawOver());
         Graphics.endShaders();
 
-        Graphics.flushSurface();
+        overlays.drawTop();
+
+        if(showFog){
+            Graphics.surface();
+        }else{
+            Graphics.flushSurface();
+        }
 
         batch.end();
 
@@ -329,11 +336,13 @@ public class Renderer extends RendererModule{
 
     @Override
     public void resize(int width, int height){
+        float lastX = camera.position.x, lastY = camera.position.y;
         super.resize(width, height);
         for(Player player : players){
             control.input(player.playerIndex).resetCursor();
         }
-        camera.position.set(players[0].x, players[0].y, 0);
+        camera.update();
+        camera.position.set(lastX, lastY, 0f);
     }
 
     @Override
@@ -348,42 +357,6 @@ public class Renderer extends RendererModule{
 
         avgPosition.scl(1f / players.length);
         return avgPosition;
-    }
-
-    void drawDebug(){
-        int rangex = (int) (Core.camera.viewportWidth / tilesize / 2), rangey = (int) (Core.camera.viewportHeight / tilesize / 2);
-
-        for(int x = -rangex; x <= rangex; x++){
-            for(int y = -rangey; y <= rangey; y++){
-                int worldx = Mathf.scl(camera.position.x, tilesize) + x;
-                int worldy = Mathf.scl(camera.position.y, tilesize) + y;
-
-                if(world.tile(worldx, worldy) == null) continue;
-
-                float value = world.pathfinder().getDebugValue(worldx, worldy);
-                Draw.color(Color.PURPLE);
-                Draw.alpha((value % 10f) / 10f);
-                Lines.square(worldx * tilesize, worldy * tilesize, 4f);
-            }
-        }
-
-        Draw.color(Color.ORANGE);
-        Draw.tcolor(Color.ORANGE);
-
-        ObjectIntMap<Tile> seen = new ObjectIntMap<>();
-
-        for(BlockFlag flag : BlockFlag.values()){
-            for(Tile tile : world.indexer().getEnemy(Team.blue, flag)){
-                int index = seen.getAndIncrement(tile, 0, 1);
-                Draw.tscl(0.125f);
-                Draw.text(flag.name(), tile.drawx(), tile.drawy() + tile.block().size * tilesize / 2f + 4 + index * 3);
-                Lines.square(tile.drawx(), tile.drawy(), tile.block().size * tilesize / 2f);
-            }
-        }
-        Draw.tscl(fontScale);
-        Draw.tcolor();
-
-        Draw.color();
     }
 
     public void setCameraScale(int amount){

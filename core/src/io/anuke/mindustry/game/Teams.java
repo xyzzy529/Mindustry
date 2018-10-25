@@ -20,8 +20,6 @@ public class Teams{
      * @param enemies The array of enemies of this team. Any team not in this array is considered neutral.
      */
     public void add(Team team, Team... enemies){
-        if(map[team.ordinal()] != null) throw new RuntimeException("Can't define team information twice!");
-
         map[team.ordinal()] = new TeamData(team, EnumSet.of(enemies));
     }
 

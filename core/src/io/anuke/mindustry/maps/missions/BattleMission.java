@@ -1,16 +1,17 @@
 package io.anuke.mindustry.maps.missions;
 
-import com.badlogic.gdx.math.GridPoint2;
-import com.badlogic.gdx.utils.Array;
 import io.anuke.mindustry.Vars;
 import io.anuke.mindustry.game.GameMode;
 import io.anuke.mindustry.game.Team;
 import io.anuke.mindustry.maps.generation.FortressGenerator;
 import io.anuke.mindustry.maps.generation.Generation;
+import io.anuke.mindustry.world.Tile;
 import io.anuke.ucore.util.Bundles;
 
+import static io.anuke.mindustry.Vars.*;
+
 public class BattleMission extends Mission{
-    private final static int coreX = 60, coreY = 60;
+    final int spacing = 30;
 
     @Override
     public GameMode getMode(){
@@ -24,12 +25,16 @@ public class BattleMission extends Mission{
 
     @Override
     public void generate(Generation gen){
-        int enemyX = gen.width-1-coreX, enemyY = gen.height-1-coreX;
+        super.generate(gen);
 
-        generateCoreAt(gen, coreX, coreY, Team.blue);
-        generateCoreAt(gen, enemyX, enemyY, Team.red);
+        if(state.teams.get(defaultTeam).cores.size == 0){
+            return;
+        }
 
-        new FortressGenerator().generate(gen, Team.red, coreX, coreY, enemyX, enemyY);
+        Tile core = state.teams.get(defaultTeam).cores.first();
+        int enx = world.width() - 1 - spacing;
+        int eny = world.height() - 1 - spacing;
+        new FortressGenerator().generate(gen, Team.red, core.x, core.y, enx, eny);
     }
 
     @Override
@@ -40,10 +45,5 @@ public class BattleMission extends Mission{
             }
         }
         return true;
-    }
-
-    @Override
-    public Array<GridPoint2> getSpawnPoints(Generation gen){
-        return Array.with(new GridPoint2(coreX, coreY), new GridPoint2(gen.width - 1 - coreX, gen.height - 1 - coreY));
     }
 }
