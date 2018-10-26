@@ -27,8 +27,6 @@ import io.anuke.ucore.scene.ui.layout.Table;
 import io.anuke.ucore.scene.ui.layout.Unit;
 import io.anuke.ucore.util.Structs;
 
-import java.util.Locale;
-
 import static io.anuke.mindustry.Vars.*;
 import static io.anuke.ucore.scene.actions.Actions.*;
 
@@ -63,13 +61,11 @@ public class UI extends SceneModule{
     public SectorsDialog sectors;
     public MissionDialog missions;
 
-    private Locale lastLocale;
-
     public UI(){
         Dialog.setShowAction(() -> sequence(
             alpha(0f),
             originCenter(),
-            moveToAligned(Gdx.graphics.getWidth() / 2, Gdx.graphics.getHeight() / 2, Align.center),
+            moveToAligned(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() / 2f, Align.center),
             scaleTo(0.0f, 1f),
             parallel(
                 scaleTo(1f, 1f, 0.1f, Interpolation.fade),
@@ -115,13 +111,13 @@ public class UI extends SceneModule{
         Structs.each(font -> {
             font.setUseIntegerPositions(false);
             font.getData().setScale(Vars.fontScale);
-            font.getData().down += Unit.dp.scl(4f);
-            font.getData().lineHeight -= Unit.dp.scl(4.3f);
+            font.getData().down += Unit.dp.scl(3f);
+            font.getData().lineHeight -= Unit.dp.scl(3f);
         }, skin.font(), skin.getFont("default-font-chat"), skin.getFont("trad-chinese"), skin.getFont("simp-chinese"));
     }
 
     @Override
-    public synchronized void update(){
+    public void update(){
         if(Graphics.drawing()) Graphics.end();
 
         act();
@@ -181,33 +177,10 @@ public class UI extends SceneModule{
     }
 
     @Override
-    public boolean hasMouse(){
-        return super.hasMouse();
-    }
-
-    @Override
     public void resize(int width, int height){
         super.resize(width, height);
 
         Events.fire(new ResizeEvent());
-    }
-
-    public Locale getLocale(){
-        String loc = Settings.getString("locale");
-        if(loc.equals("default")){
-            return Locale.getDefault();
-        }else{
-            if(lastLocale == null || !lastLocale.toString().equals(loc)){
-                if(loc.contains("_")){
-                    String[] split = loc.split("_");
-                    lastLocale = new Locale(split[0], split[1]);
-                }else{
-                    lastLocale = new Locale(loc);
-                }
-            }
-
-            return lastLocale;
-        }
     }
 
     public void loadGraphics(Runnable call){
@@ -228,12 +201,11 @@ public class UI extends SceneModule{
 
     public void loadLogic(String text, Runnable call){
         loadfrag.show(text);
-        Timers.runTask(7f, () -> {
+        Timers.runTask(7f, () ->
             threads.run(() -> {
                 call.run();
                 threads.runGraphics(loadfrag::hide);
-            });
-        });
+            }));
     }
 
     public void showTextInput(String title, String text, String def, TextFieldFilter filter, Consumer<String> confirmed){
@@ -269,6 +241,17 @@ public class UI extends SceneModule{
             getCell(content()).growX();
             content().margin(15).add(info).width(400f).wrap().get().setAlignment(Align.center, Align.center);
             buttons().addButton("$text.ok", this::hide).size(90, 50).pad(4);
+        }}.show();
+    }
+
+    public void showInfo(String info, Runnable clicked){
+        new Dialog("$text.info.title", "dialog"){{
+            getCell(content()).growX();
+            content().margin(15).add(info).width(400f).wrap().get().setAlignment(Align.center, Align.center);
+            buttons().addButton("$text.ok", () -> {
+                clicked.run();
+                hide();
+            }).size(90, 50).pad(4);
         }}.show();
     }
 

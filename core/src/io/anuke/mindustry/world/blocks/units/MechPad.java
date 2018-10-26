@@ -93,6 +93,7 @@ public class MechPad extends Block{
 
         entity.progress = 0;
         entity.player.heal();
+        entity.player.endRespawning();
         entity.open = true;
         entity.player.setDead(false);
         entity.player.inventory.clear();
@@ -123,7 +124,6 @@ public class MechPad extends Block{
 
     @Override
     public void tapped(Tile tile, Player player){
-        if(mobile && !mech.flying) return;
 
         if(checkValidTap(tile, player)){
             Call.onMechFactoryTap(player, tile);

@@ -139,7 +139,17 @@ public class Block extends BaseBlock {
         return drops != null && drops.item == item;
     }
 
-    public void updatePowerGraph(Tile tile){
+    public void onProximityRemoved(Tile tile){
+        if(tile.entity.power != null){
+            tile.block().powerGraphRemoved(tile);
+        }
+    }
+
+    public void onProximityAdded(Tile tile){
+        if(tile.block().hasPower) tile.block().updatePowerGraph(tile);
+    }
+
+    protected void updatePowerGraph(Tile tile){
         TileEntity entity = tile.entity();
 
         for(Tile other : getPowerConnections(tile, tempTiles)){
@@ -149,7 +159,7 @@ public class Block extends BaseBlock {
         }
     }
 
-    public void powerGraphRemoved(Tile tile){
+    protected void powerGraphRemoved(Tile tile){
         tile.entity.power.graph.remove(tile);
         for(int i = 0; i < tile.entity.power.links.size; i++){
             Tile other = world.tile(tile.entity.power.links.get(i));
@@ -162,7 +172,8 @@ public class Block extends BaseBlock {
     public Array<Tile> getPowerConnections(Tile tile, Array<Tile> out){
         out.clear();
         for(Tile other : tile.entity.proximity()){
-            if(other.entity.power != null && !(consumesPower && other.block().consumesPower && !outputsPower && !other.block().outputsPower)){
+            if(other.entity.power != null && !(consumesPower && other.block().consumesPower && !outputsPower && !other.block().outputsPower)
+                    && !tile.entity.power.links.contains(other.packedPosition())){
                 out.add(other);
             }
         }
@@ -217,9 +228,9 @@ public class Block extends BaseBlock {
     }
 
     /**Call when some content is produced. This unlocks the content if it is applicable.*/
-    public void useContent(UnlockableContent content){
-        if(!headless){
-            control.unlocks().unlockContent(content);
+    public void useContent(Tile tile, UnlockableContent content){
+        if(!headless && tile.getTeam() == players[0].getTeam()){
+            control.unlocks.handleContentUsed(content);
         }
     }
 

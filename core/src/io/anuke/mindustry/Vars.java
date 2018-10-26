@@ -49,7 +49,7 @@ public class Vars{
     public static final int maxNameLength = 40;
     public static final float itemSize = 5f;
     public static final int tilesize = 8;
-    public static final int sectorSize = 120;
+    public static final int sectorSize = 250;
     public static final int mapPadding = 3;
     public static final int invalidSector = Integer.MAX_VALUE;
     public static Locale[] locales;
@@ -97,7 +97,6 @@ public class Vars{
     public static boolean headless = false;
     public static float controllerMin = 0.25f;
     public static float baseControllerSpeed = 11f;
-    //only if smoothCamera
     public static boolean snapCamera = true;
     public static ContentLoader content;
     public static GameState state;

@@ -4,16 +4,9 @@ import com.badlogic.gdx.utils.Array;
 import io.anuke.mindustry.content.Items;
 import io.anuke.mindustry.content.UnitTypes;
 import io.anuke.mindustry.content.blocks.*;
-import io.anuke.mindustry.game.EventType.WorldLoadEvent;
 import io.anuke.mindustry.maps.generation.Generation;
-import io.anuke.mindustry.maps.generation.WorldGenerator.GenResult;
 import io.anuke.mindustry.maps.missions.*;
-import io.anuke.mindustry.type.Item;
 import io.anuke.mindustry.world.Block;
-import io.anuke.mindustry.world.Tile;
-import io.anuke.mindustry.world.blocks.Floor;
-import io.anuke.ucore.core.Events;
-import io.anuke.ucore.core.Timers;
 import io.anuke.ucore.util.Bundles;
 
 import static io.anuke.mindustry.Vars.*;
@@ -40,31 +33,6 @@ public class TutorialSector{
             new BlockLocMission(ProductionBlocks.mechanicalDrill, 55, 60).setMessage("$tutorial.drillturret"),
 
             new WaveMission(2).setMessage("$tutorial.waves"),
-
-            new ActionMission(() -> {
-                Timers.runTask(30f, () -> {
-                    Runnable r = () -> {
-                        Array<Item> ores = Array.with(Items.copper, Items.coal, Items.lead);
-                        GenResult res = new GenResult();
-                        for(int x = 0; x < world.width(); x++){
-                            for(int y = 0; y < world.height(); y++){
-                                Tile tile = world.tile(x, y);
-                                world.generator().generateTile(res, 0, 0, x, y, true, null, ores);
-                                if(!tile.hasCliffs()){
-                                    tile.setFloor((Floor) res.floor);
-                                }
-                            }
-                        }
-                        Events.fire(new WorldLoadEvent());
-                    };
-
-                    if(headless){
-                        ui.loadLogic(r);
-                    }else{
-                        threads.run(r);
-                    }
-                });
-            }),
 
             new ItemMission(Items.lead, 150).setMessage("$tutorial.lead"),
             new ItemMission(Items.copper, 250).setMessage("$tutorial.morecopper"),
@@ -122,13 +90,7 @@ public class TutorialSector{
             new BlockLocMission(PowerBlocks.powerNode, 62, 54),
 
             new UnitMission(UnitTypes.dagger).setMessage("$tutorial.dagger"),
-            new ExpandMission(1, 0){
-                @Override
-                public void onComplete(){
-                    super.onComplete();
-                    generateBase();
-                }
-            },
+            new ActionMission(TutorialSector::generateBase),
             new BattleMission(){
                 public void generate(Generation gen){} //no
             }.setMessage("$tutorial.battle")
@@ -150,7 +112,7 @@ public class TutorialSector{
     }
 
     private static void generateBase(){
-        int x = sectorSize/2 + sectorSize, y = sectorSize/2;
+        int x = sectorSize - 50, y = sectorSize - 50;
         world.setBlock(world.tile(x, y), StorageBlocks.core, waveTeam);
         world.setBlock(world.tile(x - 1, y + 2), UnitBlocks.daggerFactory, waveTeam);
         world.setBlock(world.tile(x - 1, y - 3), UnitBlocks.daggerFactory, waveTeam);

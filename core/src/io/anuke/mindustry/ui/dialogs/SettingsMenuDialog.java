@@ -151,17 +151,14 @@ public class SettingsMenuDialog extends SettingsDialog{
                     dialog.addCloseButton();
                     dialog.content().addButton("$text.settings.clearsectors", "clear", () -> {
                         ui.showConfirm("$text.confirm", "$text.settings.clear.confirm", () -> {
-                            Settings.putString("sectors", "{}");
-                            Settings.save();
-                            world.sectors().load();
+                            world.sectors.clear();
                             dialog.hide();
                         });
                     });
                     dialog.content().row();
                     dialog.content().addButton("$text.settings.clearunlocks", "clear", () -> {
                         ui.showConfirm("$text.confirm", "$text.settings.clear.confirm", () -> {
-                            Settings.putString("unlocks", "{}");
-                            Settings.save();
+                            control.unlocks.reset();
                             dialog.hide();
                         });
                     });

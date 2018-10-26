@@ -9,7 +9,6 @@ import io.anuke.ucore.core.Graphics;
 import io.anuke.ucore.graphics.Draw;
 import io.anuke.ucore.graphics.Lines;
 import io.anuke.ucore.scene.Element;
-import io.anuke.ucore.scene.event.ClickListener;
 import io.anuke.ucore.scene.event.InputEvent;
 import io.anuke.ucore.scene.event.InputListener;
 import io.anuke.ucore.scene.ui.layout.Unit;
@@ -18,7 +17,8 @@ import io.anuke.ucore.scene.utils.ScissorStack;
 import io.anuke.ucore.util.Bundles;
 import io.anuke.ucore.util.Mathf;
 
-import static io.anuke.mindustry.Vars.*;
+import static io.anuke.mindustry.Vars.ui;
+import static io.anuke.mindustry.Vars.world;
 
 public class SectorsDialog extends FloatingDialog{
     private Rectangle clip = new Rectangle();
@@ -42,18 +42,23 @@ public class SectorsDialog extends FloatingDialog{
                 + (selected.saveID == -1 ? " " + Bundles.get("text.sector.unexplored") :
                     (selected.hasSave() ? "  [accent]/[white] " + Bundles.format("text.sector.time", selected.getSave().getPlayTime()) : ""))));
         content().row();
-        content().label(() -> Bundles.format("text.mission", selected == null || selected.completedMissions >= selected.missions.size
-        ? Bundles.get("text.none") : selected.missions.get(selected.completedMissions).menuDisplayString())
-                        + "[WHITE] " /*+ (selected == null ? "" : Bundles.format("text.save.difficulty", "[LIGHT_GRAY]" + selected.getDifficulty().toString()))*/);
+        content().label(() -> Bundles.format("text.mission.main", selected == null || selected.completedMissions >= selected.missions.size
+        ? Bundles.get("text.none") : selected.getDominantMission().menuDisplayString()));
         content().row();
         content().add(new SectorView()).grow();
         content().row();
+
+        buttons().addImageTextButton("$text.sector.abandon", "icon-cancel",  16*2, () ->
+                ui.showConfirm("$text.confirm", "$text.sector.abandon.confirm", () -> world.sectors.abandonSector(selected)))
+        .size(200f, 64f).disabled(b -> selected == null || !selected.hasSave());
+
+        buttons().row();
+
         buttons().addImageTextButton("$text.sector.deploy", "icon-play",  10*3, () -> {
             hide();
-
-            ui.loadLogic(() -> world.sectors().playSector(selected));
-        }).size(230f, 64f).disabled(b -> selected == null)
-        .update(t -> t.setText(selected != null && selected.hasSave() ? "$text.sector.resume" : "$text.sector.deploy"));
+            ui.loadLogic(() -> world.sectors.playSector(selected));
+        }).disabled(b -> selected == null)
+            .fillX().height(64f).colspan(2).update(t -> t.setText(selected != null && selected.hasSave() ? "$text.sector.resume" : "$text.sector.deploy"));
     }
 
     void selectSector(Sector sector){
@@ -66,7 +71,7 @@ public class SectorsDialog extends FloatingDialog{
 
     class SectorView extends Element{
         float lastX, lastY;
-        float sectorSize = Unit.dp.scl(32*4);
+        float sectorSize = Unit.dp.scl(32*5);
         float sectorPadding = Unit.dp.scl(14f);
         boolean clicked = false;
         float panX = -sectorPadding/2f, panY = -sectorSize/2f;
@@ -99,12 +104,7 @@ public class SectorsDialog extends FloatingDialog{
                 }
             });
 
-            addListener(new ClickListener(){
-                @Override
-                public void clicked(InputEvent event, float x, float y){
-                    clicked = true;
-                }
-            });
+            clicked(() -> clicked = true);
         }
 
         @Override
@@ -132,9 +132,9 @@ public class SectorsDialog extends FloatingDialog{
                     float drawX = x + width/2f+ sectorX * padSectorSize - offsetX * padSectorSize - panX % padSectorSize;
                     float drawY = y + height/2f + sectorY * padSectorSize - offsetY * padSectorSize - panY % padSectorSize;
 
-                    Sector sector = world.sectors().get(sectorX, sectorY);
-                    int width = (sector == null ? 1 : sector.width);
-                    int height = (sector == null ? 1 : sector.height);
+                    Sector sector = world.sectors.get(sectorX, sectorY);
+                    int width = 1;
+                    int height = 1;
                     float paddingx = (width-1) * sectorPadding;
                     float paddingy = (height-1) * sectorPadding;
 

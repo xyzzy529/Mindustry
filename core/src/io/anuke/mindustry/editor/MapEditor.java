@@ -15,7 +15,6 @@ import io.anuke.ucore.util.Bits;
 import io.anuke.ucore.util.Mathf;
 import static io.anuke.mindustry.Vars.content;
 public class MapEditor{
-    public static final int minMapSize = 128, maxMapSize = 512;
     public static final int[] brushSizes = {1, 2, 3, 4, 5, 9, 15};
 
     private MapTileData map;
@@ -27,10 +26,6 @@ public class MapEditor{
     private int rotation;
     private Block drawBlock = Blocks.stone;
     private Team drawTeam = Team.blue;
-
-    public MapEditor(){
-
-    }
 
     public MapTileData getMap(){
         return map;
@@ -48,7 +43,7 @@ public class MapEditor{
         if(clear){
             for(int x = 0; x < map.width(); x++){
                 for(int y = 0; y < map.height(); y++){
-                    map.write(x, y, DataPosition.floor, (byte) Blocks.stone.id);
+                    map.write(x, y, DataPosition.floor, Blocks.stone.id);
                 }
             }
         }
@@ -277,7 +272,7 @@ public class MapEditor{
         map = new MapTileData(width, height);
         for(int x = 0; x < map.width(); x++){
             for(int y = 0; y < map.height(); y++){
-                map.write(x, y, DataPosition.floor, (byte) Blocks.stone.id);
+                map.write(x, y, DataPosition.floor, Blocks.stone.id);
             }
         }
         renderer.resize(width, height);

@@ -13,6 +13,7 @@ import io.anuke.mindustry.game.Content;
 import io.anuke.mindustry.game.EventType.*;
 import io.anuke.mindustry.game.Saves;
 import io.anuke.mindustry.game.Unlocks;
+import io.anuke.mindustry.gen.Call;
 import io.anuke.mindustry.input.DefaultKeybinds;
 import io.anuke.mindustry.input.DesktopInput;
 import io.anuke.mindustry.input.InputHandler;
@@ -23,10 +24,11 @@ import io.anuke.mindustry.type.ItemStack;
 import io.anuke.mindustry.type.Recipe;
 import io.anuke.mindustry.ui.dialogs.FloatingDialog;
 import io.anuke.ucore.core.*;
-import io.anuke.ucore.entities.Entities;
 import io.anuke.ucore.entities.EntityQuery;
 import io.anuke.ucore.modules.Module;
-import io.anuke.ucore.util.Atlas;
+import io.anuke.ucore.util.*;
+
+import java.io.IOException;
 
 import static io.anuke.mindustry.Vars.*;
 
@@ -40,13 +42,14 @@ public class Control extends Module{
     /** Minimum period of time between the same sound being played.*/
     private static final long minSoundPeriod = 100;
 
+    public final Saves saves;
+    public final Unlocks unlocks;
+
+    private Timer timerRPC= new Timer(), timerUnlock = new Timer();
     private boolean hiscore = false;
     private boolean wasPaused = false;
-    private Saves saves;
-    private Unlocks unlocks;
     private InputHandler[] inputs = {};
     private ObjectMap<Sound, Long> soundMap = new ObjectMap<>();
-
     private Throwable error;
 
     public Control(){
@@ -73,7 +76,7 @@ public class Control extends Module{
             long value = soundMap.get(sound, 0L);
 
             if(TimeUtils.timeSinceMillis(value) >= minSoundPeriod){
-                threads.run(() -> sound.play(volume));
+                threads.runGraphics(() -> sound.play(volume));
                 soundMap.put(sound, time);
             }
         });
@@ -109,10 +112,13 @@ public class Control extends Module{
 
             state.set(State.playing);
 
-            if(world.getSector() == null && !Settings.getBool("custom-warning", false)){
-                threads.runGraphics(() -> ui.showInfo("$mode.custom.warning"));
-                Settings.putBool("custom-warning", true);
-                Settings.save();
+            if(world.getSector() == null && !Settings.getBool("custom-warning-for-real-1", false)){
+                threads.runGraphics(() -> ui.showInfo("$mode.custom.warning", () ->
+                    ui.showInfo("$mode.custom.warning.read", () -> {
+                        Settings.putBool("custom-warning-for-real-1", true);
+                        Settings.save();
+                    })));
+
             }
         });
 
@@ -153,12 +159,31 @@ public class Control extends Module{
 
             threads.runGraphics(() -> {
                 Effects.shake(5, 6, Core.camera.position.x, Core.camera.position.y);
-                ui.restart.show();
-                state.set(State.menu);
+                //the restart dialog can show info for any number of scenarios
+                Call.onGameOver(event.winner);
             });
         });
 
+        //autohost for pvp sectors
+        Events.on(WorldLoadEvent.class, event -> {
+            if(state.mode.isPvp && !Net.active()){
+                try{
+                    Net.host(port);
+                    players[0].isAdmin = true;
+                }catch(IOException e){
+                    ui.showError(Bundles.format("text.server.error", Strings.parseException(e, false)));
+                    threads.runDelay(() -> state.set(State.menu));
+                }
+            }
+        });
+
         Events.on(WorldLoadEvent.class, event -> threads.runGraphics(() -> Events.fire(new WorldLoadGraphicsEvent())));
+
+        Events.on(TileChangeEvent.class, event -> {
+            if(event.tile.getTeam() == players[0].getTeam() && Recipe.getByResult(event.tile.block()) != null){
+                unlocks.handleContentUsed(Recipe.getByResult(event.tile.block()));
+            }
+        });
     }
 
     public void addPlayer(int index){
@@ -218,16 +243,8 @@ public class Control extends Module{
         System.arraycopy(oldi, 0, inputs, 0, inputs.length);
     }
 
-    public Unlocks unlocks(){
-        return unlocks;
-    }
-
     public void setError(Throwable error){
         this.error = error;
-    }
-
-    public Saves getSaves(){
-        return saves;
     }
 
     public InputHandler input(int index){
@@ -235,16 +252,11 @@ public class Control extends Module{
     }
 
     public void playMap(Map map){
-        ui.loadfrag.show();
-
-        Timers.run(5f, () ->
-                threads.run(() -> {
-                    logic.reset();
-                    world.loadMap(map);
-                    logic.play();
-
-                    Gdx.app.postRunnable(ui.loadfrag::hide);
-                }));
+        ui.loadLogic(() -> {
+            logic.reset();
+            world.loadMap(map);
+            logic.play();
+        });
     }
 
     public boolean isHighScore(){
@@ -256,10 +268,10 @@ public class Control extends Module{
 
         if(entity == null) return;
 
-        entity.items.forEach((item, amount) -> control.unlocks().unlockContent(item));
+        entity.items.forEach((item, amount) -> unlocks.unlockContent(item));
 
         if(players[0].inventory.hasItem()){
-            control.unlocks().unlockContent(players[0].inventory.getItem().item);
+            unlocks.unlockContent(players[0].inventory.getItem().item);
         }
 
         outer:
@@ -270,7 +282,7 @@ public class Control extends Module{
                     if(!entity.items.has(stack.item, Math.min((int) (stack.amount * unlockResourceScaling), 2000))) continue outer;
                 }
 
-                if(control.unlocks().unlockContent(recipe)){
+                if(unlocks.unlockContent(recipe)){
                     ui.hudfrag.showUnlock(recipe);
                 }
             }
@@ -327,13 +339,12 @@ public class Control extends Module{
     /** Called from main logic thread.*/
     public void runUpdateLogic(){
         if(!state.is(State.menu)){
-            renderer.minimap().updateUnitArray();
+            renderer.minimap.updateUnitArray();
         }
     }
 
     @Override
     public void update(){
-
         if(error != null){
             throw new RuntimeException(error);
         }
@@ -350,12 +361,12 @@ public class Control extends Module{
             }
 
             //auto-update rpc every 5 seconds
-            if(Timers.get("rpcUpdate", 60 * 5)){
+            if(timerRPC.get(60 * 5)){
                 Platform.instance.updateRPC();
             }
 
             //check unlocks every 2 seconds
-            if(!state.mode.infiniteResources && Timers.get("timerCheckUnlock", 120)){
+            if(!state.mode.infiniteResources && timerUnlock.get(120)){
                 checkUnlockableBlocks();
 
                 //save if the unlocks changed
@@ -382,12 +393,8 @@ public class Control extends Module{
                 }
             }
 
-            if(!state.is(State.paused) || Net.active()){
-                Entities.update(effectGroup);
-                Entities.update(groundEffectGroup);
-            }
         }else{
-            if(!state.is(State.paused) || Net.active()){
+            if(!state.isPaused()){
                 Timers.update();
             }
         }

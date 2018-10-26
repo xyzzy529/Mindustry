@@ -12,7 +12,6 @@ import io.anuke.annotations.Annotations.Variant;
 import io.anuke.mindustry.Vars;
 import io.anuke.mindustry.core.GameState.State;
 import io.anuke.mindustry.entities.Player;
-import io.anuke.mindustry.entities.TileEntity;
 import io.anuke.mindustry.entities.traits.BuilderTrait.BuildRequest;
 import io.anuke.mindustry.entities.traits.SyncTrait;
 import io.anuke.mindustry.entities.traits.TypeTrait;
@@ -24,7 +23,8 @@ import io.anuke.mindustry.net.NetworkIO;
 import io.anuke.mindustry.net.Packets.*;
 import io.anuke.mindustry.net.TraceInfo;
 import io.anuke.mindustry.net.ValidateException;
-import io.anuke.mindustry.world.modules.InventoryModule;
+import io.anuke.mindustry.world.Tile;
+import io.anuke.mindustry.world.modules.ItemModule;
 import io.anuke.ucore.core.Core;
 import io.anuke.ucore.core.Settings;
 import io.anuke.ucore.core.Timers;
@@ -292,11 +292,11 @@ public class NetClient extends Module{
         byte cores = input.readByte();
         for(int i = 0; i < cores; i++){
             int pos = input.readInt();
-            TileEntity entity = world.tile(pos).entity;
-            if(entity != null){
-                entity.items.read(input);
+            Tile tile = world.tile(pos);
+            if(tile != null && tile.entity != null){
+                tile.entity.items.read(input);
             }else{
-                new InventoryModule().read(input);
+                new ItemModule().read(input);
             }
         }
 
@@ -398,6 +398,11 @@ public class NetClient extends Module{
         Net.disconnect();
     }
 
+    /**When set, any disconnects will be ignored and no dialogs will be shown.*/
+    public void setQuiet(){
+        quiet = true;
+    }
+
     public synchronized void addRemovedEntity(int id){
         removed.add(id);
     }
@@ -410,9 +415,14 @@ public class NetClient extends Module{
 
         if(timer.get(0, playerSyncTime)){
             Player player = players[0];
-            BuildRequest[] requests = new BuildRequest[player.getPlaceQueue().size];
-            for(int i = 0; i < requests.length; i++){
-                requests[i] = player.getPlaceQueue().get(i);
+
+            BuildRequest[] requests;
+
+            synchronized(player.getPlaceQueue()){
+                requests = new BuildRequest[player.getPlaceQueue().size];
+                for(int i = 0; i < requests.length; i++){
+                    requests[i] = player.getPlaceQueue().get(i);
+                }
             }
 
             Call.onClientShapshot(lastSent++, TimeUtils.millis(), player.x, player.y,

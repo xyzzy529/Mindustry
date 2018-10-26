@@ -35,7 +35,6 @@ public class PowerNode extends PowerBlock{
     protected Translator t2 = new Translator();
 
     protected float laserRange = 6;
-    protected float powerSpeed = 0.5f;
     protected int maxNodes = 3;
 
     public PowerNode(String name){
@@ -74,22 +73,22 @@ public class PowerNode extends PowerBlock{
 
         TileEntity entity = tile.entity();
 
-        entity.power.links.removeValue(other.packedPosition());
-
-        if(other.block() instanceof PowerNode){
-            other.entity.power.links.removeValue(tile.packedPosition());
-        }
-
         //clear all graph data first
         PowerGraph tg = entity.power.graph;
         tg.clear();
+
+        entity.power.links.removeValue(other.packedPosition());
+        other.entity.power.links.removeValue(tile.packedPosition());
+
         //reflow from this point, covering all tiles on this side
         tg.reflow(tile);
 
-        //create new graph for other end
-        PowerGraph og = new PowerGraph();
-        //reflow from other end
-        og.reflow(other);
+        if(other.entity.power.graph != tg){
+            //create new graph for other end
+            PowerGraph og = new PowerGraph();
+            //reflow from other end
+            og.reflow(other);
+        }
     }
 
     @Override
@@ -111,7 +110,6 @@ public class PowerNode extends PowerBlock{
         super.setStats();
 
         stats.add(BlockStat.powerRange, laserRange, StatUnit.blocks);
-        stats.add(BlockStat.powerTransferSpeed, powerSpeed * 60 / 2f, StatUnit.powerSecond); //divided by 2 since passback exists
     }
 
     @Override

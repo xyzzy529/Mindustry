@@ -20,9 +20,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import static io.anuke.mindustry.Vars.itemSize;
-import static io.anuke.mindustry.Vars.tilesize;
-
 import static io.anuke.mindustry.Vars.*;
 
 public class Conveyor extends Block{
@@ -201,7 +198,7 @@ public class Conveyor extends Block{
     }
 
     @Override
-    public synchronized void update(Tile tile){
+    public void update(Tile tile){
 
         ConveyorEntity entity = tile.entity();
         entity.minitem = 1f;
@@ -277,7 +274,7 @@ public class Conveyor extends Block{
     }
 
     @Override
-    public synchronized int removeStack(Tile tile, Item item, int amount){
+    public int removeStack(Tile tile, Item item, int amount){
         ConveyorEntity entity = tile.entity();
         entity.noSleep();
         int removed = 0;
@@ -303,13 +300,13 @@ public class Conveyor extends Block{
     }
 
     @Override
-    public synchronized int acceptStack(Item item, int amount, Tile tile, Unit source){
+    public int acceptStack(Item item, int amount, Tile tile, Unit source){
         ConveyorEntity entity = tile.entity();
         return Math.min((int)(entity.minitem / itemSpace), amount);
     }
 
     @Override
-    public synchronized void handleStack(Item item, int amount, Tile tile, Unit source){
+    public void handleStack(Item item, int amount, Tile tile, Unit source){
         ConveyorEntity entity = tile.entity();
 
         for(int i = amount - 1; i >= 0; i--){

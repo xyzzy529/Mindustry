@@ -39,12 +39,12 @@ public abstract class Unit extends DestructibleEntity implements SaveTrait, Targ
     /**Maximum absolute value of a velocity vector component.*/
     public static final float maxAbsVelocity = 127f / velocityPercision;
 
-    public UnitInventory inventory = new UnitInventory(this);
+    public final UnitInventory inventory = new UnitInventory(this);
     public float rotation;
     public float hitTime;
 
-    protected Interpolator interpolator = new Interpolator();
-    protected StatusController status = new StatusController();
+    protected final Interpolator interpolator = new Interpolator();
+    protected final StatusController status = new StatusController();
     protected Team team = Team.blue;
 
     protected CarryTrait carrier;
@@ -52,7 +52,7 @@ public abstract class Unit extends DestructibleEntity implements SaveTrait, Targ
 
     @Override
     public boolean movable(){
-        return true;
+        return !isDead();
     }
 
     @Override
@@ -100,7 +100,7 @@ public abstract class Unit extends DestructibleEntity implements SaveTrait, Targ
 
     @Override
     public boolean collides(SolidTrait other){
-        if(isDead()) return true;
+        if(isDead()) return false;
 
         if(other instanceof DamageTrait){
             return other instanceof TeamTrait && state.teams.areEnemies((((TeamTrait) other).getTeam()), team);
@@ -119,6 +119,15 @@ public abstract class Unit extends DestructibleEntity implements SaveTrait, Targ
     @Override
     public Vector2 getVelocity(){
         return velocity;
+    }
+
+    @Override
+    public void move(float x, float y){
+        if(!isFlying()){
+            super.move(x, y);
+        }else{
+            moveBy(x, y);
+        }
     }
 
     @Override
@@ -187,6 +196,11 @@ public abstract class Unit extends DestructibleEntity implements SaveTrait, Targ
     public Floor getFloorOn(){
         Tile tile = world.tileWorld(x, y);
         return tile == null ? (Floor) Blocks.air : tile.floor();
+    }
+
+    @Override
+    public boolean isValid(){
+        return !isDead() && isAdded();
     }
 
     /**Updates velocity and status effects.*/

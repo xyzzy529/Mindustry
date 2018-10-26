@@ -29,13 +29,11 @@ public class NetworkIO{
     public static void writeWorld(Player player, OutputStream os){
 
         try(DataOutputStream stream = new DataOutputStream(os)){
-
-            stream.writeFloat(Timers.time()); //timer time
-            stream.writeLong(TimeUtils.millis()); //timestamp
-
             //--GENERAL STATE--
             stream.writeByte(state.mode.ordinal()); //gamemode
             stream.writeUTF(world.getMap().name); //map name
+            stream.writeInt(world.getSector() == null ? invalidSector : world.getSector().packedPosition()); //sector ID
+            stream.writeInt(world.getSector() == null ? 0 : world.getSector().completedMissions);
 
             //write tags
             ObjectMap<String, String> tags = world.getMap().meta.tags;
@@ -153,18 +151,21 @@ public class NetworkIO{
 
         Player player = players[0];
 
-        //TODO !! use map name as the network map in Maps, so getMap() isn't null.
-
         try(DataInputStream stream = new DataInputStream(is)){
-            float timerTime = stream.readFloat();
-            long timestamp = stream.readLong();
-
             Timers.clear();
-            Timers.resetTime(timerTime + (TimeUtils.timeSinceMillis(timestamp) / 1000f) * 60f);
 
             //general state
             byte mode = stream.readByte();
             String map = stream.readUTF();
+            int sector = stream.readInt();
+            int missions = stream.readInt();
+
+            if(sector != invalidSector){
+                world.sectors.createSector(Bits.getLeftShort(sector), Bits.getRightShort(sector));
+                world.setSector(world.sectors.get(sector));
+                world.getSector().completedMissions = missions;
+            }
+
             ObjectMap<String, String> tags = new ObjectMap<>();
 
             byte tagSize = stream.readByte();
@@ -183,6 +184,7 @@ public class NetworkIO{
 
             Entities.clear();
             int id = stream.readInt();
+            player.resetNoAdd();
             player.read(stream, TimeUtils.millis());
             player.resetID(id);
             player.add();
@@ -193,11 +195,9 @@ public class NetworkIO{
             int width = stream.readShort();
             int height = stream.readShort();
 
-            //TODO send advanced map meta such as author, etc
             Map currentMap = new Map(map, new MapMeta(0, new ObjectMap<>(), width, height, null), true, () -> null);
             currentMap.meta.tags.clear();
             currentMap.meta.tags.putAll(tags);
-            world.setSector(null);
             world.setMap(currentMap);
 
             Tile[][] tiles = world.createTiles(width, height);
@@ -258,7 +258,6 @@ public class NetworkIO{
                 i += consecutives;
             }
 
-            player.reset();
             state.teams = new Teams();
 
             byte teams = stream.readByte();

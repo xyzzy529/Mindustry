@@ -22,7 +22,7 @@ import io.anuke.mindustry.world.meta.BlockBar;
 import io.anuke.mindustry.world.meta.BlockFlag;
 import io.anuke.mindustry.world.meta.BlockStat;
 import io.anuke.mindustry.world.meta.StatUnit;
-import io.anuke.mindustry.world.modules.InventoryModule;
+import io.anuke.mindustry.world.modules.ItemModule;
 import io.anuke.ucore.core.Effects;
 import io.anuke.ucore.core.Graphics;
 import io.anuke.ucore.graphics.Draw;
@@ -35,7 +35,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 public class UnitFactory extends Block{
-    protected float gracePeriodMultiplier = 23f;
+    protected float gracePeriodMultiplier = 15f;
     protected float speedupTime = 60f * 60f * 20;
     protected float maxSpeedup = 2f;
 
@@ -178,7 +178,7 @@ public class UnitFactory extends Block{
             entity.buildTime = 0f;
 
             Call.onUnitFactorySpawn(tile);
-            useContent(type);
+            useContent(tile, type);
 
             for(ItemStack stack : consumes.items()){
                 entity.items.remove(stack.item, stack.amount);
@@ -211,7 +211,7 @@ public class UnitFactory extends Block{
         return new UnitFactoryEntity();
     }
 
-    protected boolean hasRequirements(InventoryModule inv, float fraction){
+    protected boolean hasRequirements(ItemModule inv, float fraction){
         for(ItemStack stack : consumes.items()){
             if(!inv.has(stack.item, (int) (fraction * stack.amount))){
                 return false;

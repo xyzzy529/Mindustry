@@ -8,8 +8,6 @@ import io.anuke.ucore.core.Settings;
 import static io.anuke.mindustry.Vars.headless;
 
 public class Administration{
-    public static final int defaultMaxBrokenBlocks = 15;
-    public static final int defaultBreakCooldown = 1000 * 15;
 
     /**All player info. Maps UUIDs to info. This persists throughout restarts.*/
     private ObjectMap<String, PlayerInfo> playerInfo = new ObjectMap<>();
@@ -276,8 +274,8 @@ public class Administration{
     }
 
     private void load(){
-        playerInfo = Settings.getObject("player-info", ObjectMap.class, () -> new ObjectMap<>());
-        bannedIPs = Settings.getObject("banned-ips", Array.class, () -> new Array<>());
+        playerInfo = Settings.getObject("player-info", ObjectMap.class, ObjectMap::new);
+        bannedIPs = Settings.getObject("banned-ips", Array.class, Array::new);
     }
 
     @Serialize

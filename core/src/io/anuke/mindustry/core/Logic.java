@@ -1,17 +1,17 @@
 package io.anuke.mindustry.core;
 
 import com.badlogic.gdx.utils.Array;
+import io.anuke.annotations.Annotations.Loc;
+import io.anuke.annotations.Annotations.Remote;
 import io.anuke.mindustry.Vars;
 import io.anuke.mindustry.ai.control.AI;
 import io.anuke.mindustry.core.GameState.State;
 import io.anuke.mindustry.entities.TileEntity;
-import io.anuke.mindustry.game.EventType.GameOverEvent;
-import io.anuke.mindustry.game.EventType.PlayEvent;
-import io.anuke.mindustry.game.EventType.ResetEvent;
-import io.anuke.mindustry.game.EventType.WaveEvent;
-import io.anuke.mindustry.game.Team;
+import io.anuke.mindustry.game.EventType.*;
 import io.anuke.mindustry.game.GameMode;
+import io.anuke.mindustry.game.Team;
 import io.anuke.mindustry.game.Teams;
+import io.anuke.mindustry.gen.Call;
 import io.anuke.mindustry.net.Net;
 import io.anuke.mindustry.type.ItemStack;
 import io.anuke.mindustry.world.Tile;
@@ -83,11 +83,26 @@ public class Logic extends Module{
         Events.fire(new WaveEvent());
     }
 
-    //this never triggers in PvP; only for checking sector game-overs
     private void checkGameOver(){
         if(!state.mode.isPvp && state.teams.get(defaultTeam).cores.size == 0 && !state.gameOver){
             state.gameOver = true;
-            Events.fire(new GameOverEvent());
+            Events.fire(new GameOverEvent(waveTeam));
+        }else if(state.mode.isPvp){
+            Team alive = null;
+
+            for(Team team : Team.all){
+                if(state.teams.get(team).cores.size > 0){
+                    if(alive != null){
+                        return;
+                    }
+                    alive = team;
+                }
+            }
+
+            if(alive != null && !state.gameOver){
+                state.gameOver = true;
+                Events.fire(new GameOverEvent(alive));
+            }
         }
     }
 
@@ -98,24 +113,42 @@ public class Logic extends Module{
 
         //check unlocked sectors
         while(!world.getSector().complete && world.getSector().currentMission().isComplete()){
-            world.getSector().currentMission().onComplete();
-            world.getSector().completedMissions ++;
-
-            state.mode = world.getSector().currentMission().getMode();
-            world.getSector().currentMission().onBegin();
-            world.sectors().save();
+            Call.onMissionFinish(world.getSector().completedMissions);
         }
 
         //check if all assigned missions are complete
         if(!world.getSector().complete && world.getSector().completedMissions >= world.getSector().missions.size){
-            state.mode = GameMode.victory;
-
-            world.sectors().completeSector(world.getSector().x, world.getSector().y);
-            world.sectors().save();
-            if(!headless){
-                ui.missions.show(world.getSector());
-            }
+            Call.onSectorComplete();
         }
+    }
+
+    @Remote(called = Loc.both)
+    public static void onGameOver(Team winner){
+        threads.runGraphics(() -> ui.restart.show(winner));
+        netClient.setQuiet();
+    }
+
+    @Remote(called = Loc.server)
+    public static void onMissionFinish(int index){
+        world.getSector().missions.get(index).onComplete();
+        world.getSector().completedMissions = index + 1;
+
+        state.mode = world.getSector().currentMission().getMode();
+        world.getSector().currentMission().onBegin();
+        world.sectors.save();
+    }
+
+    @Remote(called = Loc.server)
+    public static void onSectorComplete(){
+        state.mode = GameMode.victory;
+
+        world.sectors.completeSector(world.getSector().x, world.getSector().y);
+        world.sectors.save();
+        if(!headless){
+            ui.missions.show(world.getSector());
+        }
+
+        Events.fire(new SectorCompleteEvent());
     }
 
     @Override
@@ -128,17 +161,13 @@ public class Logic extends Module{
 
         if(!state.is(State.menu)){
 
-            if(!state.is(State.paused) || Net.active()){
-                Timers.update();
-            }
-
-            updateSectors();
-
             if(!Net.client() && !world.isInvalidMap()){
+                updateSectors();
                 checkGameOver();
             }
 
-            if(!state.is(State.paused) || Net.active()){
+            if(!state.isPaused()){
+                Timers.update();
 
                 for(Team team : Team.all){
                     if(state.teams.isActive(team) && state.teams.get(team).ai != null){
@@ -157,15 +186,19 @@ public class Logic extends Module{
                 if(!Entities.defaultGroup().isEmpty())
                     throw new RuntimeException("Do not add anything to the default group!");
 
+                if(!headless){
+                    Entities.update(effectGroup);
+                    Entities.update(groundEffectGroup);
+                }
 
                 for(EntityGroup group : unitGroups){
                     Entities.update(group);
                 }
 
                 Entities.update(puddleGroup);
-                Entities.update(tileGroup);
                 Entities.update(shieldGroup);
                 Entities.update(bulletGroup);
+                Entities.update(tileGroup);
                 Entities.update(fireGroup);
                 Entities.update(playerGroup);
 
@@ -189,7 +222,7 @@ public class Logic extends Module{
                 EntityQuery.collideGroups(bulletGroup, playerGroup);
                 EntityQuery.collideGroups(playerGroup, playerGroup);
 
-                world.pathfinder().update();
+                world.pathfinder.update();
             }
         }
 

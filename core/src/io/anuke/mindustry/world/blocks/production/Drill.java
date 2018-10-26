@@ -22,6 +22,7 @@ import io.anuke.ucore.core.Graphics;
 import io.anuke.ucore.core.Timers;
 import io.anuke.ucore.graphics.Draw;
 import io.anuke.ucore.util.Mathf;
+import io.anuke.ucore.util.Threads;
 
 import static io.anuke.mindustry.Vars.content;
 public class Drill extends Block{
@@ -203,7 +204,7 @@ public class Drill extends Block{
 
             offloadNear(tile, entity.dominantItem);
 
-            useContent(entity.dominantItem);
+            useContent(tile, entity.dominantItem);
 
             entity.index++;
             entity.progress = 0f;
@@ -216,7 +217,7 @@ public class Drill extends Block{
     @Override
     public boolean canPlaceOn(Tile tile){
         if(isMultiblock()){
-            for(Tile other : tile.getLinkedTilesAs(this, drawTiles)){
+            for(Tile other : tile.getLinkedTilesAs(this, Threads.isLogic() ? tempTiles : drawTiles)){
                 if(isValid(other)){
                     return true;
                 }

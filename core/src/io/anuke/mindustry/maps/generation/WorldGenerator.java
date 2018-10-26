@@ -8,7 +8,9 @@ import com.badlogic.gdx.utils.ObjectMap;
 import io.anuke.mindustry.content.Items;
 import io.anuke.mindustry.content.blocks.Blocks;
 import io.anuke.mindustry.content.blocks.OreBlocks;
+import io.anuke.mindustry.content.blocks.StorageBlocks;
 import io.anuke.mindustry.game.Team;
+import io.anuke.mindustry.maps.Map;
 import io.anuke.mindustry.maps.MapTileData;
 import io.anuke.mindustry.maps.MapTileData.TileDataMarker;
 import io.anuke.mindustry.maps.Sector;
@@ -20,13 +22,12 @@ import io.anuke.mindustry.world.blocks.Floor;
 import io.anuke.mindustry.world.blocks.OreBlock;
 import io.anuke.ucore.noise.RidgedPerlin;
 import io.anuke.ucore.noise.Simplex;
-import io.anuke.ucore.util.Structs;
 import io.anuke.ucore.util.Geometry;
 import io.anuke.ucore.util.Mathf;
 import io.anuke.ucore.util.SeedRandom;
+import io.anuke.ucore.util.Structs;
 
-import static io.anuke.mindustry.Vars.sectorSize;
-import static io.anuke.mindustry.Vars.world;
+import static io.anuke.mindustry.Vars.*;
 
 
 public class WorldGenerator{
@@ -138,6 +139,50 @@ public class WorldGenerator{
         }
     }
 
+    public void playRandomMap(){
+        ui.loadLogic(() -> {
+            world.setSector(null);
+            logic.reset();
+
+            int sx = (short)Mathf.range(Short.MAX_VALUE/2);
+            int sy = (short)Mathf.range(Short.MAX_VALUE/2);
+            int width = 380;
+            int height = 380;
+            Array<GridPoint2> spawns = new Array<>();
+            Array<Item> ores = Item.getAllOres();
+
+            if(state.mode.isPvp){
+                int scaling = 10;
+                spawns.add(new GridPoint2(width/scaling, height/scaling));
+                spawns.add(new GridPoint2(width - 1 - width/scaling, height - 1 - height/scaling));
+            }else{
+                spawns.add(new GridPoint2(width/2, height/2));
+            }
+
+            Tile[][] tiles = world.createTiles(width, height);
+            world.setMap(new Map("Generated Map", width, height));
+            world.beginMapLoad();
+
+            for(int x = 0; x < width; x++){
+                for(int y = 0; y < height; y++){
+                    generateTile(result, sx, sy, x, y, true, spawns, ores);
+                    tiles[x][y] = new Tile(x, y, result.floor.id, result.wall.id, (byte)0, (byte)0, result.elevation);
+                }
+            }
+
+            prepareTiles(tiles);
+
+            world.setBlock(tiles[spawns.get(0).x][spawns.get(0).y], StorageBlocks.core, Team.blue);
+
+            if(state.mode.isPvp){
+                world.setBlock(tiles[spawns.get(1).x][spawns.get(1).y], StorageBlocks.core, Team.red);
+            }
+
+            world.endMapLoad();
+            logic.play();
+        });
+    }
+
     public void generateOres(Tile[][] tiles, long seed, boolean genOres, Array<Item> usedOres){
         oreIndex = 0;
 
@@ -187,7 +232,7 @@ public class WorldGenerator{
         SeedRandom rnd = new SeedRandom(sector.getSeed());
         Generation gena = new Generation(sector, tiles, tiles.length, tiles[0].length, rnd);
         Array<GridPoint2> spawnpoints = sector.currentMission().getSpawnPoints(gena);
-        Array<Item> ores = world.sectors().getOres(sector.x, sector.y);
+        Array<Item> ores = world.sectors.getOres(sector.x, sector.y);
 
         for(int x = 0; x < width; x++){
             for(int y = 0; y < height; y++){
@@ -324,8 +369,7 @@ public class WorldGenerator{
             int offsetX = x - 4, offsetY = y + 23;
             for(int i = ores.size - 1; i >= 0; i--){
                 Item entry = ores.get(i);
-                if(
-                Math.abs(0.5f - sim.octaveNoise2D(2, 0.7, 1f / (50 + i * 2), offsetX, offsetY)) > 0.23f &&
+                if(Math.abs(0.5f - sim.octaveNoise2D(2, 0.7, 1f / (50 + i * 2), offsetX, offsetY)) > 0.23f &&
                 Math.abs(0.5f - sim2.octaveNoise2D(1, 1, 1f / (40 + i * 4), offsetX, offsetY)) > 0.32f){
                     floor = OreBlocks.get(floor, entry);
                     break;

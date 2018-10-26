@@ -10,10 +10,11 @@ import io.anuke.mindustry.game.EventType.WorldLoadEvent;
 import io.anuke.mindustry.game.Team;
 import io.anuke.mindustry.game.Teams.TeamData;
 import io.anuke.mindustry.type.Item;
+import io.anuke.mindustry.world.Block;
+import io.anuke.mindustry.world.Build;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.world.meta.BlockFlag;
 import io.anuke.ucore.core.Events;
-import io.anuke.ucore.entities.trait.Entity;
 import io.anuke.ucore.function.Predicate;
 import io.anuke.ucore.util.EnumSet;
 import io.anuke.ucore.util.Geometry;
@@ -26,6 +27,7 @@ import static io.anuke.mindustry.Vars.*;
 //TODO maybe use Arrays instead of ObjectSets?
 
 /**Class used for indexing special target blocks for AI.*/
+@SuppressWarnings("unchecked")
 public class BlockIndexer{
     /**Size of one ore quadrant.*/
     private final static int oreQuadrantSize = 20;
@@ -116,7 +118,7 @@ public class BlockIndexer{
     }
 
     public TileEntity findTile(Team team, float x, float y, float range, Predicate<Tile> pred){
-        Entity closest = null;
+        TileEntity closest = null;
         float dst = 0;
 
         for(int rx = Math.max((int) ((x - range) / tilesize / structQuadrantSize), 0); rx <= (int) ((x + range) / tilesize / structQuadrantSize) && rx < quadWidth(); rx++){
@@ -142,7 +144,7 @@ public class BlockIndexer{
             }
         }
 
-        return (TileEntity) closest;
+        return closest;
     }
 
     /**
@@ -155,11 +157,9 @@ public class BlockIndexer{
         return ores.get(item, emptySet);
     }
 
-    /**
-     * Find the closest ore block relative to a position.
-     */
+    /**Find the closest ore block relative to a position.*/
     public Tile findClosestOre(float xp, float yp, Item item){
-        Tile tile = Geometry.findClosest(xp, yp, world.indexer().getOrePositions(item));
+        Tile tile = Geometry.findClosest(xp, yp, world.indexer.getOrePositions(item));
 
         if(tile == null) return null;
 
@@ -167,6 +167,24 @@ public class BlockIndexer{
             for(int y = Math.max(0, tile.y - oreQuadrantSize / 2); y < tile.y + oreQuadrantSize / 2 && y < world.height(); y++){
                 Tile res = world.tile(x, y);
                 if(res.block() == Blocks.air && res.floor().drops != null && res.floor().drops.item == item){
+                    return res;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public Tile findClosestOre(float xp, float yp, Item item, Block block, Team team){
+        Tile tile = Geometry.findClosest(xp, yp, world.indexer.getOrePositions(item));
+
+        if(tile == null) return null;
+
+        for(int x = Math.max(0, tile.x - oreQuadrantSize / 2); x < tile.x + oreQuadrantSize / 2 && x < world.width(); x++){
+            for(int y = Math.max(0, tile.y - oreQuadrantSize / 2); y < tile.y + oreQuadrantSize / 2 && y < world.height(); y++){
+                Tile res = world.tile(x, y);
+                if(res.block() == Blocks.air && res.floor().drops != null && res.floor().drops.item == item &&
+                        Build.validPlace(team, x, y, block, 0)){
                     return res;
                 }
             }

@@ -35,7 +35,7 @@ public class HudFragment extends Fragment{
     public final BlocksFragment blockfrag = new BlocksFragment();
 
     private ImageButton menu, flip;
-    private Table wavetable;
+    private Stack wavetable;
     private Table infolabel;
     private Table lastUnlockTable;
     private Table lastUnlockLayout;
@@ -110,6 +110,8 @@ public class HudFragment extends Fragment{
             stack.add(waves);
             stack.add(btable);
 
+            wavetable = stack;
+
             addWaveTable(waves);
             addPlayButton(btable);
             cont.add(stack).fillX().height(66f);
@@ -127,7 +129,7 @@ public class HudFragment extends Fragment{
                 if(Net.hasClient()){
                     t.label(() -> ping.get(Net.getPing())).visible(() -> Net.client() && !gwt).colspan(2);
                 }
-            }).size(-1).visible(() -> Settings.getBool("fps")).update(t -> t.setTranslation(0, state.mode.disableWaves ? waves.getHeight() : 0)).get();
+            }).size(-1).visible(() -> Settings.getBool("fps")).update(t -> t.setTranslation(0, (!waves.isVisible() ? wavetable.getHeight() : Math.min(wavetable.getTranslation().y, wavetable.getHeight())) )).get();
 
             //make wave box appear below rest of menu
             cont.swapActor(wavetable, menu.getParent());
@@ -140,7 +142,12 @@ public class HudFragment extends Fragment{
         //paused table
         parent.fill(t -> {
             t.top().visible(() -> state.is(State.paused) && !Net.active());
-            t.table("clear", top -> top.add("[orange]< " + Bundles.get("text.paused") + " >").pad(6).get().setFontScale(fontScale * 1.5f));
+            t.table("clear", top -> top.add("$text.paused").pad(6).get().setFontScale(fontScale * 1.5f));
+        });
+
+        parent.fill(t -> {
+            t.visible(() -> netServer.isWaitingForPlayers() && !state.is(State.menu));
+            t.table("clear", c -> c.margin(10).add("$text.waiting.players"));
         });
 
         //'core is under attack' table
@@ -184,7 +191,7 @@ public class HudFragment extends Fragment{
 
         //'saving' indicator
         parent.fill(t -> {
-            t.bottom().visible(() -> !state.is(State.menu) && control.getSaves().isSaving());
+            t.bottom().visible(() -> !state.is(State.menu) && control.saves.isSaving());
             t.add("$text.saveload");
         });
 
@@ -344,10 +351,8 @@ public class HudFragment extends Fragment{
     }
 
     private void addWaveTable(TextButton table){
-        wavetable = table;
 
         IntFormat wavef = new IntFormat("text.wave");
-        IntFormat waitf = new IntFormat("text.wave.waiting");
         IntFormat enemyf = new IntFormat("text.wave.enemy");
         IntFormat enemiesf = new IntFormat("text.wave.enemies");
 
@@ -375,7 +380,7 @@ public class HudFragment extends Fragment{
         });
 
         table.setDisabled(() -> !(world.getSector() != null && world.getSector().currentMission().hasMessage()));
-        table.visible(() -> !((world.getSector() == null && state.mode.disableWaves) || !state.mode.showMission));
+        table.visible(() -> !((world.getSector() == null && state.mode.disableWaves) || !state.mode.showMission || (world.getSector() != null && world.getSector().complete)));
     }
 
     private void addPlayButton(Table table){
