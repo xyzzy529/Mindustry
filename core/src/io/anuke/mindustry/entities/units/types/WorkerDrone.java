@@ -97,7 +97,6 @@ public class WorkerDrone extends FlyingUnit implements BuilderTrait{
 
     public void beginTask(WorkTask task){
         Log.info("{0}: begin {1}", id, task.getClass().getSimpleName());
-        //new RuntimeException().printStackTrace();
         tasks.add(task);
         task.begin(this);
     }

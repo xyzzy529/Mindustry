@@ -243,7 +243,7 @@ public class World extends Module{
         EntityQuery.resizeTree(0, 0, width * tilesize, height * tilesize);
 
         try{
-            generator.loadTileData(tiles, MapIO.readTileData(map, true), map.meta.hasOreGen(), 0);
+            generator.loadTileData(tiles, MapIO.readTileData(map, true), map.meta.hasOreGen(), Mathf.random(9999));
         } catch(Exception e){
             Log.err(e);
             if(!headless){
