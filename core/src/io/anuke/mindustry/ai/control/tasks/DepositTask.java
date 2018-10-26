@@ -10,6 +10,11 @@ public class DepositTask implements WorkTask {
 
     @Override
     public void update(WorkerDrone drone) {
+        if(drone.getInventory().isEmpty()){
+            drone.finishTask();
+            return;
+        }
+
         TileEntity tile = drone.getClosestCore();
         drone.circleTo(tile, 20f);
 

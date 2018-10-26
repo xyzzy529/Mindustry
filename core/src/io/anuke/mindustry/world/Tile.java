@@ -360,9 +360,9 @@ public class Tile implements PosTrait, TargetTrait{
 
     public Tile getNearby(int rotation){
         if(rotation == 0) return world.tile(x + 1, y);
-        if(rotation == 1) return world.tile(x, y + 1);
-        if(rotation == 2) return world.tile(x - 1, y);
-        if(rotation == 3) return world.tile(x, y - 1);
+        else if(rotation == 1) return world.tile(x, y + 1);
+        else if(rotation == 2) return world.tile(x - 1, y);
+        else if(rotation == 3) return world.tile(x, y - 1);
         return null;
     }
 

@@ -176,16 +176,20 @@ public class BlockIndexer{
     }
 
     public Tile findClosestOre(float xp, float yp, Item item, Block block, Team team){
-        Tile tile = Geometry.findClosest(xp, yp, world.indexer.getOrePositions(item));
+        ObjectSet<Tile> set = world.indexer.getOrePositions(item);
+        returnArray.clear();
+        for(Tile tile : set) returnArray.add(tile);
 
-        if(tile == null) return null;
+        returnArray.sort((a, b) -> Float.compare(Vector2.dst(xp, yp, a.worldx(), a.worldy()), Vector2.dst(xp, yp, b.worldx(), b.worldy())));
 
-        for(int x = Math.max(0, tile.x - oreQuadrantSize / 2); x < tile.x + oreQuadrantSize / 2 && x < world.width(); x++){
-            for(int y = Math.max(0, tile.y - oreQuadrantSize / 2); y < tile.y + oreQuadrantSize / 2 && y < world.height(); y++){
-                Tile res = world.tile(x, y);
-                if(res.block() == Blocks.air && res.floor().drops != null && res.floor().drops.item == item &&
-                        Build.validPlace(team, x, y, block, 0)){
-                    return res;
+        for(Tile tile : returnArray) {
+            for (int x = Math.max(0, tile.x - oreQuadrantSize / 2); x < tile.x + oreQuadrantSize / 2 && x < world.width(); x++) {
+                for (int y = Math.max(0, tile.y - oreQuadrantSize / 2); y < tile.y + oreQuadrantSize / 2 && y < world.height(); y++) {
+                    Tile res = world.tile(x, y);
+                    if (res.block() == Blocks.air && res.floor().drops != null && res.floor().drops.item == item &&
+                            Build.validPlace(team, x, y, block, 0)) {
+                        return res;
+                    }
                 }
             }
         }
