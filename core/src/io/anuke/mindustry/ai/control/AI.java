@@ -25,8 +25,6 @@ public class AI{
     private final Team team;
     private ObjectMap<Block, ObjectSet<Tile>> blocks = new ObjectMap<>();
 
-    private Block drillBlock = ProductionBlocks.mechanicalDrill;
-
     private final Block drillBlock = ProductionBlocks.mechanicalDrill;
 
     public AI(Team team) {
