@@ -91,11 +91,6 @@ public class AndroidLauncher extends PatchedAndroidApplication{
             }
 
             @Override
-            public boolean isDebug(){
-                return false;
-            }
-
-            @Override
             public String getUUID(){
                 try{
                     String s = Secure.getString(getContext().getContentResolver(),
@@ -207,7 +202,7 @@ public class AndroidLauncher extends PatchedAndroidApplication{
                         file.write(inStream, false);
                         if(SaveIO.isSaveValid(file)){
                             try{
-                                SaveSlot slot = control.getSaves().importSave(file);
+                                SaveSlot slot = control.saves.importSave(file);
                                 ui.load.runLoadSave(slot);
                             }catch(IOException e){
                                 ui.showError(Bundles.format("text.save.import.fail", Strings.parseException(e, false)));

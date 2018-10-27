@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Interpolation;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Scaling;
 import io.anuke.mindustry.core.GameState.State;
@@ -15,15 +16,14 @@ import io.anuke.mindustry.net.Packets.AdminAction;
 import io.anuke.mindustry.type.Recipe;
 import io.anuke.mindustry.ui.IntFormat;
 import io.anuke.mindustry.ui.Minimap;
+import io.anuke.mindustry.ui.dialogs.FloatingDialog;
 import io.anuke.ucore.core.*;
 import io.anuke.ucore.graphics.Hue;
 import io.anuke.ucore.scene.Element;
 import io.anuke.ucore.scene.Group;
 import io.anuke.ucore.scene.actions.Actions;
 import io.anuke.ucore.scene.event.Touchable;
-import io.anuke.ucore.scene.ui.Image;
-import io.anuke.ucore.scene.ui.ImageButton;
-import io.anuke.ucore.scene.ui.Label;
+import io.anuke.ucore.scene.ui.*;
 import io.anuke.ucore.scene.ui.layout.Stack;
 import io.anuke.ucore.scene.ui.layout.Table;
 import io.anuke.ucore.util.Bundles;
@@ -35,7 +35,7 @@ public class HudFragment extends Fragment{
     public final BlocksFragment blockfrag = new BlocksFragment();
 
     private ImageButton menu, flip;
-    private Table wavetable;
+    private Stack wavetable;
     private Table infolabel;
     private Table lastUnlockTable;
     private Table lastUnlockLayout;
@@ -103,7 +103,18 @@ public class HudFragment extends Fragment{
 
             cont.row();
 
-            Table waves = cont.table(this::addWaveTable).touchable(Touchable.enabled).fillX().height(66f).get();
+            Stack stack = new Stack();
+            TextButton waves = new TextButton("");
+            Table btable = new Table();
+
+            stack.add(waves);
+            stack.add(btable);
+
+            wavetable = stack;
+
+            addWaveTable(waves);
+            addPlayButton(btable);
+            cont.add(stack).fillX().height(66f);
 
             cont.row();
 
@@ -118,7 +129,7 @@ public class HudFragment extends Fragment{
                 if(Net.hasClient()){
                     t.label(() -> ping.get(Net.getPing())).visible(() -> Net.client() && !gwt).colspan(2);
                 }
-            }).size(-1).visible(() -> Settings.getBool("fps")).update(t -> t.setTranslation(0, state.mode.disableWaves ? waves.getHeight() : 0)).get();
+            }).size(-1).visible(() -> Settings.getBool("fps")).update(t -> t.setTranslation(0, (!waves.isVisible() ? wavetable.getHeight() : Math.min(wavetable.getTranslation().y, wavetable.getHeight())) )).get();
 
             //make wave box appear below rest of menu
             cont.swapActor(wavetable, menu.getParent());
@@ -131,7 +142,12 @@ public class HudFragment extends Fragment{
         //paused table
         parent.fill(t -> {
             t.top().visible(() -> state.is(State.paused) && !Net.active());
-            t.table("clear", top -> top.add("[orange]< " + Bundles.get("text.paused") + " >").pad(6).get().setFontScale(fontScale * 1.5f));
+            t.table("clear", top -> top.add("$text.paused").pad(6).get().setFontScale(fontScale * 1.5f));
+        });
+
+        parent.fill(t -> {
+            t.visible(() -> netServer.isWaitingForPlayers() && !state.is(State.menu));
+            t.table("clear", c -> c.margin(10).add("$text.waiting.players"));
         });
 
         //'core is under attack' table
@@ -175,11 +191,32 @@ public class HudFragment extends Fragment{
 
         //'saving' indicator
         parent.fill(t -> {
-            t.bottom().visible(() -> !state.is(State.menu) && control.getSaves().isSaving());
+            t.bottom().visible(() -> !state.is(State.menu) && control.saves.isSaving());
             t.add("$text.saveload");
         });
 
         blockfrag.build(Core.scene.getRoot());
+    }
+
+    public void showText(String text){
+        Table table = new Table("button");
+        table.update(() -> {
+            if(state.is(State.menu)){
+                table.remove();
+            }
+        });
+        table.margin(12);
+        table.addImage("icon-check").size(16*2).pad(3);
+        table.add(text).wrap().width(280f).get().setAlignment(Align.center, Align.center);
+        table.pack();
+
+        //create container table which will align and move
+        Table container = Core.scene.table();
+        container.top().add(table);
+        container.setTranslation(0, table.getPrefHeight());
+        container.actions(Actions.translateBy(0, -table.getPrefHeight(), 1f, Interpolation.fade), Actions.delay(4f),
+        //nesting actions() calls is necessary so the right prefHeight() is used
+        Actions.run(() -> container.actions(Actions.translateBy(0, table.getPrefHeight(), 1f, Interpolation.fade), Actions.removeActor())));
     }
 
     /**
@@ -281,6 +318,16 @@ public class HudFragment extends Fragment{
         }
     }
 
+    public void showTextDialog(String str){
+        new FloatingDialog("$text.mission.info"){{
+            shouldPause = true;
+            setFillParent(false);
+            getCell(content()).growX();
+            content().margin(15).add(str).width(400f).wrap().get().setAlignment(Align.left, Align.left);
+            buttons().addButton("$text.continue", this::hide).size(140, 60).pad(4);
+        }}.show();
+    }
+
     private void toggleMenus(){
         wavetable.clearActions();
         infolabel.clearActions();
@@ -303,46 +350,47 @@ public class HudFragment extends Fragment{
         }
     }
 
-    private String getEnemiesRemaining(){
-        int enemies = unitGroups[Team.red.ordinal()].size();
-        if(enemies == 1){
-            return Bundles.format("text.enemies.single", enemies);
-        }else{
-            return Bundles.format("text.enemies", enemies);
-        }
-    }
-
-    private void addWaveTable(Table table){
-        wavetable = table;
-        float uheight = 66f;
+    private void addWaveTable(TextButton table){
 
         IntFormat wavef = new IntFormat("text.wave");
-        IntFormat timef = new IntFormat("text.wave.waiting");
+        IntFormat enemyf = new IntFormat("text.wave.enemy");
+        IntFormat enemiesf = new IntFormat("text.wave.enemies");
+
+        table.clearChildren();
+        table.setTouchable(Touchable.enabled);
 
         table.background("button");
-        table.left().table(text -> {
-            text.left();
-            text.label(() -> wavef.get(state.wave)).left().get().setFontScale(fontScale * 1.5f);
-            text.row();
-            text.label(() -> unitGroups[Team.red.ordinal()].size() > 0 && state.mode.disableWaveTimer ?
-                getEnemiesRemaining() : (state.mode.disableWaveTimer) ? "$text.waiting" :
-                timef.get((int) (state.wavetime / 60f))).minWidth(126).left();
+
+        table.labelWrap(() ->
+            world.getSector() == null ?
+                (unitGroups[waveTeam.ordinal()].size() > 0 && state.mode.disableWaveTimer ?
+                wavef.get(state.wave) + "\n" + (unitGroups[waveTeam.ordinal()].size() == 1 ?
+                    enemyf.get(unitGroups[waveTeam.ordinal()].size()) :
+                    enemiesf.get(unitGroups[waveTeam.ordinal()].size())) :
+                wavef.get(state.wave) + "\n" +
+                    (!state.mode.disableWaveTimer ?
+                    Bundles.format("text.wave.waiting", (int)(state.wavetime/60)) :
+                    Bundles.get("text.waiting"))) :
+            Bundles.format("text.mission.display", world.getSector().currentMission().displayString())).growX();
+
+        table.clicked(() -> {
+            if(world.getSector() != null && world.getSector().currentMission().hasMessage()){
+                world.getSector().currentMission().showMessage();
+            }
         });
 
-        table.add().growX();
-        table.visible(() -> !state.mode.disableWaves);
-
-        playButton(uheight);
+        table.setDisabled(() -> !(world.getSector() != null && world.getSector().currentMission().hasMessage()));
+        table.visible(() -> !((world.getSector() == null && state.mode.disableWaves) || !state.mode.showMission || (world.getSector() != null && world.getSector().complete)));
     }
 
-    private void playButton(float uheight){
-        wavetable.addImageButton("icon-play", 30f, () -> {
+    private void addPlayButton(Table table){
+        table.right().addImageButton("icon-play", 30f, () -> {
             if(Net.client() && players[0].isAdmin){
                 Call.onAdminRequest(players[0], AdminAction.wave);
             }else{
                 state.wavetime = 0f;
             }
-        }).height(uheight).fillX().right().padTop(-8f).padBottom(-12f).padLeft(-15).padRight(-10).width(40f).update(l -> {
+        }).growY().fillX().right().width(40f).update(l -> {
             boolean vis = state.mode.disableWaveTimer && ((Net.server() || players[0].isAdmin) || !Net.active());
             boolean paused = state.is(State.paused) || !vis;
 

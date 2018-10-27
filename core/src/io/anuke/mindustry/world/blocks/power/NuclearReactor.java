@@ -76,7 +76,7 @@ public class NuclearReactor extends PowerGenerator{
     public void setStats(){
         super.setStats();
         stats.add(BlockStat.inputLiquid, new LiquidFilterValue(liquid -> liquid.temperature <= 0.5f));
-        stats.add(BlockStat.maxPowerGeneration, powerMultiplier * 60f, StatUnit.powerSecond);
+        stats.add(BlockStat.basePowerGeneration, powerMultiplier * 60f * 0.5f, StatUnit.powerSecond);
     }
 
     @Override
@@ -124,7 +124,7 @@ public class NuclearReactor extends PowerGenerator{
         if(entity.heat >= 0.999f){
             entity.kill();
         }else{
-            distributePower(tile);
+            tile.entity.power.graph.update();
         }
     }
 
@@ -193,7 +193,7 @@ public class NuclearReactor extends PowerGenerator{
     }
 
     @Override
-    public TileEntity getEntity(){
+    public TileEntity newEntity(){
         return new NuclearReactorEntity();
     }
 

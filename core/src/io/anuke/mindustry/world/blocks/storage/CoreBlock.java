@@ -5,29 +5,26 @@ import io.anuke.annotations.Annotations.Loc;
 import io.anuke.annotations.Annotations.Remote;
 import io.anuke.mindustry.Vars;
 import io.anuke.mindustry.content.UnitTypes;
-import io.anuke.mindustry.content.fx.BulletFx;
 import io.anuke.mindustry.content.fx.Fx;
 import io.anuke.mindustry.entities.Player;
 import io.anuke.mindustry.entities.TileEntity;
 import io.anuke.mindustry.entities.Unit;
 import io.anuke.mindustry.entities.Units;
-import io.anuke.mindustry.entities.bullet.Bullet;
 import io.anuke.mindustry.entities.traits.SpawnerTrait;
 import io.anuke.mindustry.entities.units.BaseUnit;
 import io.anuke.mindustry.entities.units.UnitType;
 import io.anuke.mindustry.gen.Call;
 import io.anuke.mindustry.graphics.Palette;
 import io.anuke.mindustry.graphics.Shaders;
+import io.anuke.mindustry.maps.TutorialSector;
 import io.anuke.mindustry.net.Net;
 import io.anuke.mindustry.type.Item;
-import io.anuke.mindustry.type.ItemType;
 import io.anuke.mindustry.world.BarType;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.world.meta.BlockFlag;
 import io.anuke.ucore.core.Effects;
 import io.anuke.ucore.core.Graphics;
 import io.anuke.ucore.core.Timers;
-import io.anuke.ucore.entities.EntityPhysics;
 import io.anuke.ucore.graphics.Draw;
 import io.anuke.ucore.graphics.Lines;
 import io.anuke.ucore.util.EnumSet;
@@ -41,7 +38,7 @@ import static io.anuke.mindustry.Vars.*;
 
 public class CoreBlock extends StorageBlock{
     protected float droneRespawnDuration = 60 * 6;
-    protected UnitType droneType = UnitTypes.drone;
+    protected UnitType droneType = UnitTypes.spirit;
 
     protected TextureRegion openRegion;
     protected TextureRegion topRegion;
@@ -52,7 +49,6 @@ public class CoreBlock extends StorageBlock{
         solid = false;
         solidifes = true;
         update = true;
-        unbreakable = true;
         size = 3;
         hasItems = true;
         itemCapacity = 2000;
@@ -74,12 +70,37 @@ public class CoreBlock extends StorageBlock{
         entity.currentUnit.setNet(tile.drawx(), tile.drawy());
         entity.currentUnit.add();
         entity.currentUnit = null;
+
+        if(player instanceof Player){
+            ((Player) player).endRespawning();
+        }
     }
 
     @Remote(called = Loc.server)
     public static void setCoreSolid(Tile tile, boolean solid){
+        if(tile == null) return;
         CoreEntity entity = tile.entity();
         if(entity != null) entity.solid = solid;
+    }
+
+    @Override
+    public void onProximityUpdate(Tile tile) {
+        state.teams.get(tile.getTeam()).cores.add(tile);
+    }
+
+    @Override
+    public boolean canBreak(Tile tile){
+        return state.teams.get(tile.getTeam()).cores.size > 1;
+    }
+
+    @Override
+    public void removed(Tile tile){
+        state.teams.get(tile.getTeam()).cores.remove(tile);
+    }
+
+    @Override
+    public void placed(Tile tile){
+        state.teams.get(tile.getTeam()).cores.add(tile);
     }
 
     @Override
@@ -95,11 +116,6 @@ public class CoreBlock extends StorageBlock{
 
         openRegion = Draw.region(name + "-open");
         topRegion = Draw.region(name + "-top");
-    }
-
-    @Override
-    public float handleDamage(Tile tile, float amount){
-        return debug ? 0 : amount;
     }
 
     @Override
@@ -147,28 +163,6 @@ public class CoreBlock extends StorageBlock{
     }
 
     @Override
-    public int acceptStack(Item item, int amount, Tile tile, Unit source){
-        if(acceptItem(item, tile, tile) && hasItems && source.getTeam() == tile.getTeam()){
-            return Math.min(itemCapacity - tile.entity.items.get(item), amount);
-        }else{
-            return 0;
-        }
-    }
-
-    @Override
-    public boolean acceptItem(Item item, Tile tile, Tile source){
-        return tile.entity.items.get(item) < itemCapacity && item.type == ItemType.material;
-    }
-
-    @Override
-    public void onDestroyed(Tile tile){
-        //TODO more dramatic effects
-        super.onDestroyed(tile);
-
-        state.teams.get(tile.getTeam()).cores.removeValue(tile, true);
-    }
-
-    @Override
     public void handleItem(Item item, Tile tile, Tile source){
         if(Net.server() || !Net.active()) super.handleItem(item, tile, source);
     }
@@ -181,16 +175,6 @@ public class CoreBlock extends StorageBlock{
             Call.setCoreSolid(tile, true);
         }
 
-        EntityPhysics.getNearby(bulletGroup, tile.drawx(), tile.drawy(), state.mode.enemyCoreShieldRadius*2f, e -> {
-            if(e.distanceTo(tile) > state.mode.enemyCoreShieldRadius) return;
-            Bullet bullet = (Bullet)e;
-            if(bullet.getOwner() instanceof Player && bullet.getTeam() != tile.getTeam()){
-                Effects.effect(BulletFx.absorb, bullet);
-                entity.shieldHeat = 1f;
-                bullet.absorb();
-            }
-        });
-
         if(entity.currentUnit != null){
             if(!entity.currentUnit.isDead()){
                 entity.currentUnit = null;
@@ -200,15 +184,10 @@ public class CoreBlock extends StorageBlock{
             entity.time += entity.delta();
             entity.progress += 1f / (entity.currentUnit instanceof Player ? state.mode.respawnTime : droneRespawnDuration) * entity.delta();
 
-            //instant build for fast testing.
-            if(debug){
-                entity.progress = 1f;
-            }
-
             if(entity.progress >= 1f){
                 Call.onUnitRespawn(tile, entity.currentUnit);
             }
-        }else{
+        }else if(!netServer.isWaitingForPlayers()){
             entity.warmup += Timers.delta();
 
             if(entity.solid && entity.warmup > 60f && unitGroups[tile.getTeamID()].getByID(entity.droneID) == null && !Net.client()){
@@ -222,13 +201,13 @@ public class CoreBlock extends StorageBlock{
                     }
                 }
 
-                if(!found){
+                if(!found && !TutorialSector.supressDrone()){
                     BaseUnit unit = droneType.create(tile.getTeam());
                     unit.setSpawner(tile);
                     unit.setDead(true);
                     unit.add();
 
-                    useContent(droneType);
+                    useContent(tile, droneType);
 
                     entity.droneID = unit.id;
                 }
@@ -239,13 +218,12 @@ public class CoreBlock extends StorageBlock{
     }
 
     @Override
-    public TileEntity getEntity(){
+    public TileEntity newEntity(){
         return new CoreEntity();
     }
 
-    public class CoreEntity extends TileEntity implements SpawnerTrait{
+    public class CoreEntity extends StorageEntity implements SpawnerTrait{
         public Unit currentUnit;
-        public float shieldHeat;
         int droneID = -1;
         boolean solid = true;
         float warmup;
@@ -255,7 +233,7 @@ public class CoreBlock extends StorageBlock{
 
         @Override
         public void updateSpawning(Unit unit){
-            if(currentUnit == null){
+            if(!netServer.isWaitingForPlayers() && currentUnit == null){
                 currentUnit = unit;
                 progress = 0f;
                 unit.set(tile.drawx(), tile.drawy());

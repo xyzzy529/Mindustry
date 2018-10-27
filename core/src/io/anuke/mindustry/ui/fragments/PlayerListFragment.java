@@ -1,5 +1,6 @@
 package io.anuke.mindustry.ui.fragments;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import io.anuke.mindustry.core.GameState.State;
 import io.anuke.mindustry.entities.Player;
@@ -8,6 +9,7 @@ import io.anuke.mindustry.graphics.Palette;
 import io.anuke.mindustry.net.Net;
 import io.anuke.mindustry.net.NetConnection;
 import io.anuke.mindustry.net.Packets.AdminAction;
+import io.anuke.ucore.core.Core;
 import io.anuke.ucore.core.Timers;
 import io.anuke.ucore.graphics.Draw;
 import io.anuke.ucore.graphics.Lines;
@@ -17,12 +19,14 @@ import io.anuke.ucore.scene.ui.Image;
 import io.anuke.ucore.scene.ui.layout.Table;
 import io.anuke.ucore.scene.ui.layout.Unit;
 import io.anuke.ucore.util.Bundles;
+import io.anuke.ucore.util.Timer;
 
 import static io.anuke.mindustry.Vars.*;
 
 public class PlayerListFragment extends Fragment{
     private boolean visible = false;
     private Table content = new Table().marginRight(13f).marginLeft(13f);
+    private Timer timer = new Timer();
 
     @Override
     public void build(Group parent){
@@ -34,16 +38,19 @@ public class PlayerListFragment extends Fragment{
                     return;
                 }
 
-                if(visible && Timers.get("player-list-rebuild", 20)){
+                if(visible && timer.get(20)){
                     rebuild();
+                    content.pack();
+                    content.act(Gdx.graphics.getDeltaTime());
+                    //TODO hack
+                    Core.scene.act(0f);
                 }
             });
 
             cont.table("pane", pane -> {
                 pane.label(() -> Bundles.format(playerGroup.size() == 1 ? "text.players.single" : "text.players", playerGroup.size()));
                 pane.row();
-                pane.pane("clear", content)
-                    .grow().get().setScrollingDisabled(true, false);
+                pane.pane("clear", content).grow().get().setScrollingDisabled(true, false);
                 pane.row();
 
                 pane.table("pane", menu -> {
@@ -65,10 +72,10 @@ public class PlayerListFragment extends Fragment{
 
         float h = 74f;
 
-        for(Player player : playerGroup.all()){
+        playerGroup.forEach(player -> {
             NetConnection connection = gwt ? null : player.con;
 
-            if(connection == null && Net.server() && !player.isLocal) continue;
+            if(connection == null && Net.server() && !player.isLocal) return;
 
             Table button = new Table("button");
             button.left();
@@ -104,7 +111,7 @@ public class PlayerListFragment extends Fragment{
 
                     t.addImageButton("icon-ban", 14 * 2,
                         () -> ui.showConfirm("$text.confirm", "$text.confirmban", () -> Call.onAdminRequest(player, AdminAction.ban))).padBottom(-5.1f);
-                    t.addImageButton("icon-cancel", 14 * 2,
+                    t.addImageButton("icon-cancel", 16 * 2,
                         () -> ui.showConfirm("$text.confirm", "$text.confirmkick", () -> Call.onAdminRequest(player, AdminAction.kick))).padBottom(-5.1f);
 
                     t.row();
@@ -133,7 +140,7 @@ public class PlayerListFragment extends Fragment{
 
             content.add(button).padBottom(-6).width(350f).maxHeight(h + 14);
             content.row();
-        }
+        });
 
         content.marginBottom(5);
     }

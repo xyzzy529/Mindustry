@@ -11,8 +11,6 @@ import io.anuke.ucore.graphics.Draw;
 import io.anuke.ucore.scene.ui.layout.Table;
 import io.anuke.ucore.util.Bundles;
 
-import static io.anuke.mindustry.Vars.mobile;
-
 //TODO merge unit type with mech
 public class Mech extends UnlockableContent{
     public final String name;
@@ -20,14 +18,14 @@ public class Mech extends UnlockableContent{
 
     public boolean flying;
     public float speed = 1.1f;
-    public float maxSpeed = 1.1f;
+    public float maxSpeed = 10f;
     public float boostSpeed = 0.75f;
     public float drag = 0.4f;
     public float mass = 1f;
     public float shake = 0f;
     public float armor = 1f;
 
-    public float altChargeAlpha = 0.1f;
+    public float hitsize = 6f;
     public float cellTrnsY = 0f;
     public float mineSpeed = 1f;
     public int drillPower = -1;
@@ -36,7 +34,7 @@ public class Mech extends UnlockableContent{
     public Color trailColor = Palette.boostFrom;
     public Color trailColorTo = Palette.boostTo;
     public int itemCapacity = 30;
-    public  boolean turnCursor = true;
+    public boolean turnCursor = true;
 
     public float weaponOffsetX, weaponOffsetY;
     public Weapon weapon = Weapons.blaster;
@@ -71,10 +69,7 @@ public class Mech extends UnlockableContent{
         return true;
     }
 
-    @Override
-    public boolean isHidden() {
-        return !flying && mobile;
-    }
+    public void onLand(Player player){}
 
     @Override
     public void displayInfo(Table table){

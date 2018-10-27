@@ -10,6 +10,7 @@ import io.anuke.mindustry.content.blocks.Blocks;
 import io.anuke.mindustry.content.blocks.OreBlocks;
 import io.anuke.mindustry.content.blocks.StorageBlocks;
 import io.anuke.mindustry.game.Team;
+import io.anuke.mindustry.maps.Map;
 import io.anuke.mindustry.maps.MapTileData;
 import io.anuke.mindustry.maps.MapTileData.TileDataMarker;
 import io.anuke.mindustry.maps.Sector;
@@ -21,10 +22,10 @@ import io.anuke.mindustry.world.blocks.Floor;
 import io.anuke.mindustry.world.blocks.OreBlock;
 import io.anuke.ucore.noise.RidgedPerlin;
 import io.anuke.ucore.noise.Simplex;
-import io.anuke.ucore.noise.VoronoiNoise;
 import io.anuke.ucore.util.Geometry;
 import io.anuke.ucore.util.Mathf;
 import io.anuke.ucore.util.SeedRandom;
+import io.anuke.ucore.util.Structs;
 
 import static io.anuke.mindustry.Vars.*;
 
@@ -37,16 +38,13 @@ public class WorldGenerator{
     private Simplex sim2 = new Simplex(baseSeed + 1);
     private Simplex sim3 = new Simplex(baseSeed + 2);
     private RidgedPerlin rid = new RidgedPerlin(baseSeed + 4, 1);
-    private VoronoiNoise vn = new VoronoiNoise(baseSeed + 2, (short)0);
     private SeedRandom random = new SeedRandom(baseSeed + 3);
 
     private GenResult result = new GenResult();
     private ObjectMap<Block, Block> decoration;
 
     public WorldGenerator(){
-        vn.setUseDistance(true);
-
-        decoration = Mathf.map(
+        decoration = Structs.map(
             Blocks.grass, Blocks.shrub,
             Blocks.stone, Blocks.rock,
             Blocks.ice, Blocks.icerock,
@@ -73,6 +71,11 @@ public class WorldGenerator{
         generateOres(tiles, seed, genOres, null);
     }
 
+    /**'Prepares' a tile array by:<br>
+    * - setting up multiblocks<br>
+    * - updating cliff data<br>
+    * - removing ores on cliffs<br>
+    * Usually used before placing structures on a tile array.*/
     public void prepareTiles(Tile[][] tiles){
 
         //find multiblocks
@@ -82,14 +85,8 @@ public class WorldGenerator{
             for(int y = 0; y < tiles[0].length; y++){
                 Tile tile = tiles[x][y];
 
-                Team team = tile.getTeam();
-
-                if(tile.block() == StorageBlocks.core){
-                    state.teams.get(team).cores.add(tile);
-                }
-
-                if(tiles[x][y].block().isMultiblock()){
-                    multiblocks.add(tiles[x][y].packedPosition());
+                if(tile.block().isMultiblock()){
+                    multiblocks.add(tile.packedPosition());
                 }
             }
         }
@@ -99,7 +96,7 @@ public class WorldGenerator{
             int pos = multiblocks.get(i);
 
             int x = pos % tiles.length;
-            int y = pos / tiles[0].length;
+            int y = pos / tiles.length;
 
             Block result = tiles[x][y].block();
             Team team = tiles[x][y].getTeam();
@@ -134,11 +131,56 @@ public class WorldGenerator{
                     tile.setBlock(Blocks.air);
                 }
 
+                //remove ore veins on cliffs
                 if(tile.floor() instanceof OreBlock && tile.hasCliffs()){
                     tile.setFloor(((OreBlock)tile.floor()).base);
                 }
             }
         }
+    }
+
+    public void playRandomMap(){
+        ui.loadLogic(() -> {
+            world.setSector(null);
+            logic.reset();
+
+            int sx = (short)Mathf.range(Short.MAX_VALUE/2);
+            int sy = (short)Mathf.range(Short.MAX_VALUE/2);
+            int width = 380;
+            int height = 380;
+            Array<GridPoint2> spawns = new Array<>();
+            Array<Item> ores = Item.getAllOres();
+
+            if(state.mode.isPvp){
+                int scaling = 10;
+                spawns.add(new GridPoint2(width/scaling, height/scaling));
+                spawns.add(new GridPoint2(width - 1 - width/scaling, height - 1 - height/scaling));
+            }else{
+                spawns.add(new GridPoint2(width/2, height/2));
+            }
+
+            Tile[][] tiles = world.createTiles(width, height);
+            world.setMap(new Map("Generated Map", width, height));
+            world.beginMapLoad();
+
+            for(int x = 0; x < width; x++){
+                for(int y = 0; y < height; y++){
+                    generateTile(result, sx, sy, x, y, true, spawns, ores);
+                    tiles[x][y] = new Tile(x, y, result.floor.id, result.wall.id, (byte)0, (byte)0, result.elevation);
+                }
+            }
+
+            prepareTiles(tiles);
+
+            world.setBlock(tiles[spawns.get(0).x][spawns.get(0).y], StorageBlocks.core, Team.blue);
+
+            if(state.mode.isPvp){
+                world.setBlock(tiles[spawns.get(1).x][spawns.get(1).y], StorageBlocks.core, Team.red);
+            }
+
+            world.endMapLoad();
+            logic.play();
+        });
     }
 
     public void generateOres(Tile[][] tiles, long seed, boolean genOres, Array<Item> usedOres){
@@ -190,11 +232,12 @@ public class WorldGenerator{
         SeedRandom rnd = new SeedRandom(sector.getSeed());
         Generation gena = new Generation(sector, tiles, tiles.length, tiles[0].length, rnd);
         Array<GridPoint2> spawnpoints = sector.currentMission().getSpawnPoints(gena);
+        Array<Item> ores = world.sectors.getOres(sector.x, sector.y);
 
         for(int x = 0; x < width; x++){
             for(int y = 0; y < height; y++){
-                GenResult result = generateTile(this.result, sector.x, sector.y, x, y, true, spawnpoints);
-                Tile tile = new Tile(x, y, (byte)result.floor.id, (byte)result.wall.id, (byte)0, (byte)0, result.elevation);
+                GenResult result = generateTile(this.result, sector.x, sector.y, x, y, true, spawnpoints, ores);
+                Tile tile = new Tile(x, y, result.floor.id, result.wall.id, (byte)0, (byte)0, result.elevation);
                 tiles[x][y] = tile;
             }
         }
@@ -206,7 +249,7 @@ public class WorldGenerator{
                 byte elevation = tile.getElevation();
 
                 for(GridPoint2 point : Geometry.d4){
-                    if(!Mathf.inBounds(x + point.x, y + point.y, width, height)) continue;
+                    if(!Structs.inBounds(x + point.x, y + point.y, width, height)) continue;
                     if(tiles[x + point.x][y + point.y].getElevation() < elevation){
 
                         if(sim2.octaveNoise2D(1, 1, 1.0 / 8, x, y) > 0.8){
@@ -217,8 +260,6 @@ public class WorldGenerator{
                 }
             }
         }
-
-        generateOres(tiles, sector.getSeed(), true, sector.ores);
 
         for(int x = 0; x < tiles.length; x++){
             for(int y = 0; y < tiles[0].length; y++){
@@ -242,10 +283,21 @@ public class WorldGenerator{
     }
 
     public GenResult generateTile(int sectorX, int sectorY, int localX, int localY, boolean detailed){
-        return generateTile(result, sectorX, sectorY, localX, localY, detailed, null);
+        return generateTile(result, sectorX, sectorY, localX, localY, detailed, null, null);
     }
 
-    public GenResult generateTile(GenResult result, int sectorX, int sectorY, int localX, int localY, boolean detailed, Array<GridPoint2> spawnpoints){
+    /**
+     * Gets the generation result from a specific sector at specific coordinates.
+     * @param result where to put the generation results
+     * @param sectorX X of the sector in terms of sector coordinates
+     * @param sectorY Y of the sector in terms of sector coordinates
+     * @param localX X in terms of local sector tile coordinates
+     * @param localY Y in terms of local sector tile coordinates
+     * @param detailed whether the tile result is 'detailed' (e.g. previews should not be detailed)
+     * @param spawnpoints list of player spawnpoints, can be null
+     * @return the GenResult passed in with its values modified
+     */
+    public GenResult generateTile(GenResult result, int sectorX, int sectorY, int localX, int localY, boolean detailed, Array<GridPoint2> spawnpoints, Array<Item> ores){
         int x = sectorX * sectorSize + localX + Short.MAX_VALUE;
         int y = sectorY * sectorSize + localY + Short.MAX_VALUE;
 
@@ -255,8 +307,8 @@ public class WorldGenerator{
         double ridge = rid.getValue(x, y, 1f / 400f);
         double iceridge = rid.getValue(x+99999, y, 1f / 300f) + sim3.octaveNoise2D(2, 1f, 1f/14f, x, y)/11f;
         double elevation = elevationOf(x, y, detailed);
-        double temp = vn.noise(x, y, 1f / 300f) * sim3.octaveNoise2D(detailed ? 2 : 1, 1, 1f / 13f, x, y)/13f
-            + sim3.octaveNoise2D(detailed ? 12 : 9, 0.6, 1f / 1100f, x, y);
+        double temp =
+            + sim3.octaveNoise2D(detailed ? 12 : 9, 0.6, 1f / 1100f, x - 120, y);
 
         int lerpDst = 20;
         lerpDst *= lerpDst;
@@ -313,6 +365,18 @@ public class WorldGenerator{
             wall = decoration.get(floor);
         }
 
+        if(ores != null && ((Floor) floor).hasOres){
+            int offsetX = x - 4, offsetY = y + 23;
+            for(int i = ores.size - 1; i >= 0; i--){
+                Item entry = ores.get(i);
+                if(Math.abs(0.5f - sim.octaveNoise2D(2, 0.7, 1f / (50 + i * 2), offsetX, offsetY)) > 0.23f &&
+                Math.abs(0.5f - sim2.octaveNoise2D(1, 1, 1f / (40 + i * 4), offsetX, offsetY)) > 0.32f){
+                    floor = OreBlocks.get(floor, entry);
+                    break;
+                }
+            }
+        }
+
         result.wall = wall;
         result.floor = floor;
         result.elevation = (byte) Math.max(elevation, 0);
@@ -321,7 +385,7 @@ public class WorldGenerator{
 
     double elevationOf(int x, int y, boolean detailed){
         double ridge = rid.getValue(x, y, 1f / 400f);
-        return sim.octaveNoise2D(detailed ? 7 : 4, 0.62, 1f / 800, x, y) * 6.1 - 1 - ridge;
+        return sim.octaveNoise2D(detailed ? 7 : 5, 0.62, 1f / 800, x, y) * 6.1 - 1 - ridge;
     }
 
     public static class GenResult{

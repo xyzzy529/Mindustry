@@ -5,12 +5,13 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.utils.Base64Coder;
 import com.badlogic.gdx.utils.IntSet;
 import com.badlogic.gdx.utils.TimeUtils;
+import io.anuke.annotations.Annotations.Loc;
 import io.anuke.annotations.Annotations.PacketPriority;
 import io.anuke.annotations.Annotations.Remote;
 import io.anuke.annotations.Annotations.Variant;
+import io.anuke.mindustry.Vars;
 import io.anuke.mindustry.core.GameState.State;
 import io.anuke.mindustry.entities.Player;
-import io.anuke.mindustry.entities.TileEntity;
 import io.anuke.mindustry.entities.traits.BuilderTrait.BuildRequest;
 import io.anuke.mindustry.entities.traits.SyncTrait;
 import io.anuke.mindustry.entities.traits.TypeTrait;
@@ -21,7 +22,9 @@ import io.anuke.mindustry.net.Net.SendMode;
 import io.anuke.mindustry.net.NetworkIO;
 import io.anuke.mindustry.net.Packets.*;
 import io.anuke.mindustry.net.TraceInfo;
-import io.anuke.mindustry.world.modules.InventoryModule;
+import io.anuke.mindustry.net.ValidateException;
+import io.anuke.mindustry.world.Tile;
+import io.anuke.mindustry.world.modules.ItemModule;
 import io.anuke.ucore.core.Core;
 import io.anuke.ucore.core.Settings;
 import io.anuke.ucore.core.Timers;
@@ -131,6 +134,32 @@ public class NetClient extends Module{
             packet.writeBuffer.position(0);
             RemoteReadClient.readPacket(packet.writeBuffer, packet.type);
         });
+    }
+
+    @Remote(called = Loc.server, targets = Loc.both, forward = true)
+    public static void sendMessage(Player player, String message){
+        if(message.length() > maxTextLength){
+            throw new ValidateException(player, "Player has sent a message above the text limit.");
+        }
+
+        Log.info("&y{0}: &lb{1}", (player == null || player.name == null ? "" : player.name), message);
+
+        if(Vars.ui != null){
+            Vars.ui.chatfrag.addMessage(message, player == null ? null : colorizeName(player.id, player.name));
+        }
+    }
+
+    @Remote(called = Loc.server, variants = Variant.both, forward = true)
+    public static void sendMessage(String message){
+        if(Vars.ui != null){
+            Vars.ui.chatfrag.addMessage(message, null);
+        }
+    }
+
+    private static String colorizeName(int id, String name){
+        Player player = playerGroup.getByID(id);
+        if(name == null || player == null) return null;
+        return "[#" + player.color.toString().toUpperCase() + "]" + name;
     }
 
     @Remote(variants = Variant.one, priority = PacketPriority.high)
@@ -263,11 +292,11 @@ public class NetClient extends Module{
         byte cores = input.readByte();
         for(int i = 0; i < cores; i++){
             int pos = input.readInt();
-            TileEntity entity = world.tile(pos).entity;
-            if(entity != null){
-                entity.items.read(input);
+            Tile tile = world.tile(pos);
+            if(tile != null && tile.entity != null){
+                tile.entity.items.read(input);
             }else{
-                new InventoryModule().read(input);
+                new ItemModule().read(input);
             }
         }
 
@@ -369,6 +398,11 @@ public class NetClient extends Module{
         Net.disconnect();
     }
 
+    /**When set, any disconnects will be ignored and no dialogs will be shown.*/
+    public void setQuiet(){
+        quiet = true;
+    }
+
     public synchronized void addRemovedEntity(int id){
         removed.add(id);
     }
@@ -381,16 +415,21 @@ public class NetClient extends Module{
 
         if(timer.get(0, playerSyncTime)){
             Player player = players[0];
-            BuildRequest[] requests = new BuildRequest[player.getPlaceQueue().size];
-            for(int i = 0; i < requests.length; i++){
-                requests[i] = player.getPlaceQueue().get(i);
+
+            BuildRequest[] requests;
+
+            synchronized(player.getPlaceQueue()){
+                requests = new BuildRequest[player.getPlaceQueue().size];
+                for(int i = 0; i < requests.length; i++){
+                    requests[i] = player.getPlaceQueue().get(i);
+                }
             }
 
             Call.onClientShapshot(lastSent++, TimeUtils.millis(), player.x, player.y,
                 player.pointerX, player.pointerY, player.rotation, player.baseRotation,
                 player.getVelocity().x, player.getVelocity().y,
                 player.getMineTile(),
-                player.isBoosting, player.isShooting, player.isAlt, requests,
+                player.isBoosting, player.isShooting, requests,
                 Core.camera.position.x, Core.camera.position.y,
                 Core.camera.viewportWidth * Core.camera.zoom * viewScale, Core.camera.viewportHeight * Core.camera.zoom * viewScale);
         }

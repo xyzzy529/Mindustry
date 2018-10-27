@@ -52,7 +52,6 @@ public class FileChooser extends FloatingDialog{
     }
 
     private void setupWidgets(){
-        //getCell(content()).maxWidth(UIUtils.portrait() ? Gdx.graphics.getWidth() : Gdx.graphics.getWidth()/Unit.dp.scl(2f));
         content().margin(-10);
 
         Table content = new Table();
@@ -137,7 +136,7 @@ public class FileChooser extends FloatingDialog{
         icontable.add(up);
 
         Table fieldcontent = new Table();
-        fieldcontent.bottom().left().add(new Label("File Name:"));
+        fieldcontent.bottom().left().add(new Label("$text.filename"));
         fieldcontent.add(filefield).height(40f).fillX().expandX().padLeft(10f);
 
         Table buttons = new Table();
@@ -176,7 +175,7 @@ public class FileChooser extends FloatingDialog{
         Arrays.sort(handles, (a, b) -> {
             if(a.isDirectory() && !b.isDirectory()) return -1;
             if(!a.isDirectory() && b.isDirectory()) return 1;
-            return a.name().toUpperCase().compareTo(b.name().toUpperCase());
+            return String.CASE_INSENSITIVE_ORDER.compare(a.name(), b.name());
         });
         return handles;
     }

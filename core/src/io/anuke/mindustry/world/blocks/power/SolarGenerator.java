@@ -21,14 +21,14 @@ public class SolarGenerator extends PowerGenerator{
     public void setStats(){
         super.setStats();
 
-        stats.add(BlockStat.maxPowerGeneration, generation * 60f, StatUnit.powerSecond);
+        stats.add(BlockStat.basePowerGeneration, generation * 60f, StatUnit.powerSecond);
     }
 
     @Override
     public void update(Tile tile){
         addPower(tile, generation * Timers.delta());
 
-        distributePower(tile);
+        tile.entity.power.graph.update();
     }
 
 }

@@ -17,7 +17,7 @@ import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.world.blocks.defense.Wall;
 import io.anuke.mindustry.world.consumers.Consume;
 import io.anuke.mindustry.world.modules.ConsumeModule;
-import io.anuke.mindustry.world.modules.InventoryModule;
+import io.anuke.mindustry.world.modules.ItemModule;
 import io.anuke.mindustry.world.modules.LiquidModule;
 import io.anuke.mindustry.world.modules.PowerModule;
 import io.anuke.ucore.core.Effects;
@@ -47,7 +47,7 @@ public class TileEntity extends BaseEntity implements TargetTrait, HealthTrait{
     public float timeScale = 1f, timeScaleDuration;
 
     public PowerModule power;
-    public InventoryModule items;
+    public ItemModule items;
     public LiquidModule liquids;
     public ConsumeModule cons;
 
@@ -157,6 +157,8 @@ public class TileEntity extends BaseEntity implements TargetTrait, HealthTrait{
     }
 
     public void removeFromProximity(){
+        tile.block().onProximityRemoved(tile);
+
         GridPoint2[] nearby = Edges.getEdges(tile.block().size);
         for(GridPoint2 point : nearby){
             Tile other = world.tile(tile.x + point.x, tile.y + point.y);
@@ -179,18 +181,17 @@ public class TileEntity extends BaseEntity implements TargetTrait, HealthTrait{
         for(GridPoint2 point : nearby){
             Tile other = world.tile(tile.x + point.x, tile.y + point.y);
 
-            if(other != null){
-                other.block().onProximityUpdate(other);
-                other = other.target();
-            }
+            if(other == null) continue;
+            other = other.target();
+            if(other.entity == null || other.getTeamID() != tile.getTeamID()) continue;
 
-            if(other != null && other.entity != null){
-                tmpTiles.add(other);
+            other.block().onProximityUpdate(other);
 
-                //add this tile to proximity of nearby tiles
-                if(!other.entity.proximity.contains(tile, true)){
-                    other.entity.proximity.add(tile);
-                }
+            tmpTiles.add(other);
+
+            //add this tile to proximity of nearby tiles
+            if(!other.entity.proximity.contains(tile, true)){
+                other.entity.proximity.add(tile);
             }
         }
 
@@ -199,6 +200,7 @@ public class TileEntity extends BaseEntity implements TargetTrait, HealthTrait{
             proximity.add(tile);
         }
 
+        tile.block().onProximityAdded(tile);
         tile.block().onProximityUpdate(tile);
     }
 

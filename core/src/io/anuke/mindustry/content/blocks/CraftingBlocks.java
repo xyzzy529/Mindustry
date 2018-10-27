@@ -46,6 +46,7 @@ public class CraftingBlocks extends BlockList implements ContentList{
             craftEffect = BlockFx.smeltsmoke;
             result = Items.silicon;
             craftTime = 40f;
+            powerCapacity = 20f;
             size = 2;
             hasLiquids = false;
             flameColor = Color.valueOf("ffef99");
@@ -57,9 +58,10 @@ public class CraftingBlocks extends BlockList implements ContentList{
         plastaniumCompressor = new PlastaniumCompressor("plastanium-compressor"){{
             hasItems = true;
             liquidCapacity = 60f;
-            craftTime = 80f;
+            craftTime = 60f;
             output = Items.plastanium;
             itemCapacity = 30;
+            powerCapacity = 40f;
             size = 2;
             health = 320;
             hasPower = hasLiquids = true;
@@ -67,14 +69,15 @@ public class CraftingBlocks extends BlockList implements ContentList{
             updateEffect = BlockFx.plasticburn;
 
             consumes.liquid(Liquids.oil, 0.25f);
-            consumes.power(0.25f);
+            consumes.power(0.3f);
             consumes.item(Items.titanium, 2);
         }};
 
         phaseWeaver = new PhaseWeaver("phase-weaver"){{
             craftEffect = BlockFx.smeltsmoke;
-            result = Items.phasematter;
+            result = Items.phasefabric;
             craftTime = 120f;
+            powerCapacity = 50f;
             size = 2;
 
             consumes.items(new ItemStack[]{new ItemStack(Items.thorium, 4), new ItemStack(Items.sand, 10)});
@@ -85,6 +88,7 @@ public class CraftingBlocks extends BlockList implements ContentList{
             craftEffect = BlockFx.smeltsmoke;
             result = Items.surgealloy;
             craftTime = 75f;
+            powerCapacity = 60f;
             size = 2;
 
             useFlux = true;
@@ -208,12 +212,12 @@ public class CraftingBlocks extends BlockList implements ContentList{
             output = Items.sand;
             health = 80;
             craftEffect = BlockFx.pulverize;
-            craftTime = 50f;
+            craftTime = 40f;
             updateEffect = BlockFx.pulverizeSmall;
             hasItems = hasPower = true;
 
-            consumes.item(Items.stone, 2);
-            consumes.power(0.1f);
+            consumes.item(Items.stone, 1);
+            consumes.power(0.05f);
         }};
 
         solidifier = new GenericCrafter("solidifer"){{

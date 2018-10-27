@@ -6,7 +6,6 @@ import com.badlogic.gdx.utils.ObjectIntMap;
 import io.anuke.mindustry.game.ContentList;
 import io.anuke.mindustry.game.Team;
 import io.anuke.mindustry.type.ContentType;
-import io.anuke.ucore.util.Mathf;
 
 import static io.anuke.mindustry.Vars.content;
 
@@ -34,9 +33,9 @@ public class ColorMapper implements ContentList{
             Color tmpColor = tmpColors.get();
             tmpColor.set(color);
             float maxMult = 1f/Math.max(Math.max(tmpColor.r, tmpColor.g), tmpColor.b) ;
-            float mul = Math.min(1.1f + elevation / 4f, maxMult);
-            if((cliffs & Mathf.pow2(6)) != 0){
-                mul -= 0.5f;
+            float mul = Math.min(0.7f + elevation / 5f, maxMult);
+            if((cliffs & ((1 << 6))) != 0){
+                mul -= 0.35f;
             }
             tmpColor.mul(mul, mul, mul, 1f);
             color = Color.rgba8888(tmpColor);
@@ -57,6 +56,6 @@ public class ColorMapper implements ContentList{
 
     @Override
     public ContentType type(){
-        return ContentType.mech;
+        return ContentType.block;
     }
 }

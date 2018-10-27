@@ -5,34 +5,37 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import io.anuke.mindustry.content.fx.BlockFx;
 import io.anuke.mindustry.content.fx.BulletFx;
 import io.anuke.mindustry.entities.TileEntity;
-import io.anuke.mindustry.entities.bullet.Bullet;
-import io.anuke.mindustry.entities.traits.SyncTrait;
+import io.anuke.mindustry.entities.traits.AbsorbTrait;
 import io.anuke.mindustry.graphics.Palette;
+import io.anuke.mindustry.world.BarType;
 import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.world.consumers.ConsumeLiquidFilter;
+import io.anuke.mindustry.world.meta.BlockBar;
 import io.anuke.mindustry.world.meta.BlockStat;
 import io.anuke.mindustry.world.meta.StatUnit;
 import io.anuke.ucore.core.Effects;
 import io.anuke.ucore.core.Graphics;
 import io.anuke.ucore.core.Timers;
 import io.anuke.ucore.entities.EntityGroup;
-import io.anuke.ucore.entities.EntityPhysics;
+import io.anuke.ucore.entities.EntityQuery;
 import io.anuke.ucore.entities.impl.BaseEntity;
 import io.anuke.ucore.entities.trait.DrawTrait;
 import io.anuke.ucore.graphics.Draw;
 import io.anuke.ucore.graphics.Fill;
 import io.anuke.ucore.util.Mathf;
 
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 
 import static io.anuke.mindustry.Vars.*;
 
 public class ForceProjector extends Block {
     protected int timerUse = timers ++;
-    protected float phaseUseTime = 250f;
+    protected float phaseUseTime = 350f;
 
-    protected float phaseRadiusBoost = 60f;
+    protected float phaseRadiusBoost = 80f;
     protected float radius = 100f;
     protected float breakage = 550f;
     protected float cooldownNormal = 1.75f;
@@ -68,8 +71,16 @@ public class ForceProjector extends Block {
     }
 
     @Override
+    public void setBars(){
+        super.setBars();
+
+        bars.add(new BlockBar(BarType.heat, true, tile -> tile.<ForceEntity>entity().buildup / breakage));
+    }
+
+    @Override
     public void update(Tile tile){
         ForceEntity entity = tile.entity();
+        boolean cheat = tile.isEnemyCheat();
 
         if(entity.shield == null){
             entity.shield = new ShieldEntity(tile);
@@ -78,7 +89,7 @@ public class ForceProjector extends Block {
 
         entity.phaseHeat = Mathf.lerpDelta(entity.phaseHeat, (float)entity.items.get(consumes.item()) / itemCapacity, 0.1f);
 
-        if(!entity.broken && entity.timer.get(timerUse, phaseUseTime) && entity.items.total() > 0){
+        if(entity.cons.valid() && !entity.broken && entity.timer.get(timerUse, phaseUseTime) && entity.items.total() > 0){
             entity.items.remove(consumes.item(), 1);
         }
 
@@ -88,8 +99,8 @@ public class ForceProjector extends Block {
             Effects.effect(BlockFx.reactorsmoke, tile.drawx() + Mathf.range(tilesize/2f), tile.drawy() + Mathf.range(tilesize/2f));
         }
 
-        if(!entity.cons.valid()){
-            entity.warmup = Mathf.lerpDelta(entity.warmup, 0f, 0.1f);
+        if(!entity.cons.valid() && !cheat){
+            entity.warmup = Mathf.lerpDelta(entity.warmup, 0f, 0.15f);
             if(entity.warmup <= 0.09f){
                 entity.broken = true;
             }
@@ -116,7 +127,7 @@ public class ForceProjector extends Block {
         if(entity.buildup >= breakage && !entity.broken){
             entity.broken = true;
             entity.buildup = breakage;
-            Effects.effect(BlockFx.shieldBreak, tile.drawy(), tile.drawy(), radius);
+            Effects.effect(BlockFx.shieldBreak, tile.drawx(), tile.drawy(), radius);
         }
 
         if(entity.hit > 0f){
@@ -126,14 +137,19 @@ public class ForceProjector extends Block {
         float realRadius = realRadius(entity);
 
         if(!entity.broken){
-            EntityPhysics.getNearby(bulletGroup, tile.drawx(), tile.drawy(), realRadius*2f, bullet -> {
-                if(bullet instanceof Bullet && ((Bullet) bullet).getTeam() != tile.getTeam() && isInsideHexagon(bullet.getX(), bullet.getY(), realRadius * 2f, tile.drawx(), tile.drawy())){
-                    ((Bullet) bullet).absorb();
-                    Effects.effect(BulletFx.absorb, bullet);
-                    float hit = ((Bullet) bullet).getDamage()*powerDamage;
+            EntityQuery.getNearby(bulletGroup, tile.drawx(), tile.drawy(), realRadius*2f, bullet -> {
+                AbsorbTrait trait = (AbsorbTrait)bullet;
+                if(trait.canBeAbsorbed() && trait.getTeam() != tile.getTeam() && isInsideHexagon(trait.getX(), trait.getY(), realRadius * 2f, tile.drawx(), tile.drawy())){
+                    trait.absorb();
+                    Effects.effect(BulletFx.absorb, trait);
+                    float hit = trait.getShieldDamage()*powerDamage;
                     entity.hit = 1f;
                     entity.power.amount -= Math.min(hit, entity.power.amount);
-                    entity.buildup += ((Bullet) bullet).getDamage() * entity.warmup;
+
+                    if(entity.power.amount <= 0.0001f){
+                        entity.buildup += trait.getShieldDamage() * entity.warmup*2f;
+                    }
+                    entity.buildup += trait.getShieldDamage() * entity.warmup;
                 }
             });
         }
@@ -157,7 +173,7 @@ public class ForceProjector extends Block {
         ForceEntity entity = tile.entity();
 
         if(entity.buildup <= 0f) return;
-        Draw.alpha(entity.buildup / breakage * 0.75f/* * Mathf.absin(Timers.time(), 10f - (entity.buildup/breakage)*6f, 1f)*/);
+        Draw.alpha(entity.buildup / breakage * 0.75f);
 
         Graphics.setAdditiveBlending();
         Draw.rect(topRegion, tile.drawx(), tile.drawy());
@@ -167,7 +183,7 @@ public class ForceProjector extends Block {
     }
 
     @Override
-    public TileEntity getEntity(){
+    public TileEntity newEntity(){
         return new ForceEntity();
     }
 
@@ -199,7 +215,7 @@ public class ForceProjector extends Block {
         }
     }
 
-    public class ShieldEntity extends BaseEntity implements DrawTrait, SyncTrait{
+    public class ShieldEntity extends BaseEntity implements DrawTrait{
         final ForceEntity entity;
 
         public ShieldEntity(Tile tile){
@@ -239,16 +255,5 @@ public class ForceProjector extends Block {
         public EntityGroup targetGroup(){
             return shieldGroup;
         }
-
-        @Override
-        public boolean isSyncing(){
-            return false;
-        }
-
-        @Override
-        public void write(DataOutput data) throws IOException{}
-
-        @Override
-        public void read(DataInput data, long time) throws IOException{}
     }
 }

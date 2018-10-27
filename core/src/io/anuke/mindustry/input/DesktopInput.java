@@ -57,6 +57,8 @@ public class DesktopInput extends InputHandler{
                         region.getRegionWidth() * selectScale, region.getRegionHeight() * selectScale, block.rotate ? rotation * 90 : 0);
             }
         }else{
+            Draw.color(Palette.removeBack);
+            Lines.square(x * tilesize + block.offset(), y * tilesize + block.offset() - 1, block.size * tilesize / 2f);
             Draw.color(Palette.remove);
             Lines.square(x * tilesize + block.offset(), y * tilesize + block.offset(), block.size * tilesize / 2f);
         }
@@ -69,17 +71,16 @@ public class DesktopInput extends InputHandler{
 
     @Override
     public void drawOutlined(){
-        Tile cursor = tileAt(control.gdxInput().getX(), control.gdxInput().getY());
-
-        if(cursor == null) return;
+        int cursorX = tileX(Gdx.input.getX());
+        int cursorY = tileY(Gdx.input.getY());
 
         //draw selection(s)
         if(mode == placing && recipe != null){
-            NormalizeResult result = PlaceUtils.normalizeArea(selectX, selectY, cursor.x, cursor.y, rotation, true, maxLength);
+            NormalizeResult result = PlaceUtils.normalizeArea(selectX, selectY, cursorX, cursorY, rotation, true, maxLength);
 
             for(int i = 0; i <= result.getLength(); i += recipe.result.size){
-                int x = selectX + i * Mathf.sign(cursor.x - selectX) * Mathf.bool(result.isX());
-                int y = selectY + i * Mathf.sign(cursor.y - selectY) * Mathf.bool(!result.isX());
+                int x = selectX + i * Mathf.sign(cursorX - selectX) * Mathf.bool(result.isX());
+                int y = selectY + i * Mathf.sign(cursorY - selectY) * Mathf.bool(!result.isX());
 
                 if(i + recipe.result.size > result.getLength() && recipe.result.rotate){
                     Draw.color(!validPlace(x, y, recipe.result, result.rotation) ? Palette.remove : Palette.placeRotate);
@@ -92,10 +93,8 @@ public class DesktopInput extends InputHandler{
 
             Draw.reset();
         }else if(mode == breaking){
-            NormalizeDrawResult result = PlaceUtils.normalizeDrawArea(Blocks.air, selectX, selectY, cursor.x, cursor.y, false, maxLength, 1f);
-            NormalizeResult dresult = PlaceUtils.normalizeArea(selectX, selectY, cursor.x, cursor.y, rotation, false, maxLength);
-
-            Draw.color(Palette.remove);
+            NormalizeDrawResult result = PlaceUtils.normalizeDrawArea(Blocks.air, selectX, selectY, cursorX, cursorY, false, maxLength, 1f);
+            NormalizeResult dresult = PlaceUtils.normalizeArea(selectX, selectY, cursorX, cursorY, rotation, false, maxLength);
 
             for(int x = dresult.x; x <= dresult.x2; x++){
                 for(int y = dresult.y; y <= dresult.y2; y++){
@@ -103,19 +102,25 @@ public class DesktopInput extends InputHandler{
                     if(tile == null || !validBreak(tile.x, tile.y)) continue;
                     tile = tile.target();
 
-                    Lines.poly(tile.drawx(), tile.drawy(), 4, tile.block().size * tilesize / 2f, 45 + 15);
+                    Draw.color(Palette.removeBack);
+                    Lines.square(tile.drawx(), tile.drawy()-1, tile.block().size * tilesize / 2f - 1);
+                    Draw.color(Palette.remove);
+                    Lines.square(tile.drawx(), tile.drawy(), tile.block().size * tilesize / 2f - 1);
                 }
             }
 
+            Draw.color(Palette.removeBack);
+            Lines.rect(result.x, result.y - 1, result.x2 - result.x, result.y2 - result.y);
+            Draw.color(Palette.remove);
             Lines.rect(result.x, result.y, result.x2 - result.x, result.y2 - result.y);
         }else if(isPlacing()){
             if(recipe.result.rotate){
-                Draw.color(!validPlace(cursor.x, cursor.y, recipe.result, rotation) ? Palette.remove : Palette.placeRotate);
-                Draw.grect("place-arrow", cursor.worldx() + recipe.result.offset(),
-                        cursor.worldy() + recipe.result.offset(), rotation * 90 - 90);
+                Draw.color(!validPlace(cursorX, cursorY, recipe.result, rotation) ? Palette.remove : Palette.placeRotate);
+                Draw.grect("place-arrow", cursorX * tilesize + recipe.result.offset(),
+                        cursorY * tilesize + recipe.result.offset(), rotation * 90 - 90);
             }
-            drawPlace(cursor.x, cursor.y, recipe.result, rotation);
-            recipe.result.drawPlace(cursor.x, cursor.y, rotation, validPlace(cursor.x, cursor.y, recipe.result, rotation));
+            drawPlace(cursorX, cursorY, recipe.result, rotation);
+            recipe.result.drawPlace(cursorX, cursorY, rotation, validPlace(cursorX, cursorY, recipe.result, rotation));
         }
 
         Draw.reset();
@@ -140,17 +145,11 @@ public class DesktopInput extends InputHandler{
             renderer.scaleCamera((int) Inputs.getAxisTapped(section, "zoom"));
         }
 
-        renderer.minimap().zoomBy(-(int) Inputs.getAxisTapped(section, "zoom_minimap"));
+        renderer.minimap.zoomBy(-(int) Inputs.getAxisTapped(section, "zoom_minimap"));
 
         if(player.isDead()) return;
 
         pollInput();
-
-        if(recipe != null && !Settings.getBool("desktop-place-help", false)){
-            ui.showInfo("$text.construction.desktop");
-            Settings.putBool("desktop-place-help", true);
-            Settings.save();
-        }
 
         //deselect if not placing
         if(!isPlacing() && mode == placing){
@@ -170,7 +169,7 @@ public class DesktopInput extends InputHandler{
 
         rotation = Mathf.mod(rotation + (int) Inputs.getAxisTapped(section, "rotate"), 4);
 
-        Tile cursor = tileAt(control.gdxInput().getX(), control.gdxInput().getY());
+        Tile cursor = tileAt(Gdx.input.getX(), Gdx.input.getY());
 
         if(player.isDead()){
             cursorType = normal;
@@ -200,65 +199,72 @@ public class DesktopInput extends InputHandler{
     }
 
     void pollInput(){
-        Tile cursor = tileAt(control.gdxInput().getX(), control.gdxInput().getY());
-        if(cursor == null){
-            mode = none;
-            return;
+        Tile selected = tileAt(Gdx.input.getX(), Gdx.input.getY());
+        int cursorX = tileX(Gdx.input.getX());
+        int cursorY = tileY(Gdx.input.getY());
+
+        if(Inputs.keyTap(section, "deselect")){
+            player.setMineTile(null);
         }
 
-        if(!ui.hasMouse()){
-            if(Inputs.keyTap(section, "select")){
-                if(isPlacing()){
-                    selectX = cursor.x;
-                    selectY = cursor.y;
-                    mode = placing;
-                }else{
-                    //only begin shooting if there's no cursor event
-                    if (!tileTapped(cursor) && !tryTapPlayer(Graphics.mouseWorld().x, Graphics.mouseWorld().y) && player.getPlaceQueue().size == 0 && !droppingItem &&
-                            !tryBeginMine(cursor) && player.getMineTile() == null) {
-                        player.isShooting = true;
-                    }
+        if(Inputs.keyTap(section, "select") && !ui.hasMouse()){
+            if(isPlacing()){
+                selectX = cursorX;
+                selectY = cursorY;
+                mode = placing;
+            }else if(selected != null){
+                //only begin shooting if there's no cursor event
+                if (!tileTapped(selected) && !tryTapPlayer(Graphics.mouseWorld().x, Graphics.mouseWorld().y) && player.getPlaceQueue().size == 0 && !droppingItem &&
+                        !tryBeginMine(selected) && player.getMineTile() == null) {
+                    player.isShooting = true;
                 }
-            }else if(Inputs.keyTap(section, "deselect") && (recipe != null || mode != none || player.isBuilding())){
-                if(recipe == null){
-                    player.clearBuilding();
-                }
-
-                recipe = null;
-                mode = none;
-            }else if(Inputs.keyTap(section, "break")){
-                selectX = cursor.x;
-                selectY = cursor.y;
-                mode = breaking;
+            }else{ //if it's out of bounds, shooting is just fine
+                player.isShooting = true;
             }
+        }else if(Inputs.keyTap(section, "deselect") && (recipe != null || mode != none || player.isBuilding()) &&
+        !(player.getCurrentRequest() != null && player.getCurrentRequest().remove && KeyBinds.get(section, "deselect") == KeyBinds.get(section, "break"))){
+            if(recipe == null){
+                player.clearBuilding();
+            }
+
+            recipe = null;
+            mode = none;
+        }else if(Inputs.keyTap(section, "break") && !ui.hasMouse()){
+            //is recalculated because setting the mode to breaking removes potential multiblock cursor offset
+            mode = breaking;
+            selectX = tileX(Gdx.input.getX());
+            selectY = tileY(Gdx.input.getY());
         }
+
 
         if(Inputs.keyRelease(section, "break") || Inputs.keyRelease(section, "select")){
 
             if(mode == placing){ //touch up while placing, place everything in selection
-                NormalizeResult result = PlaceUtils.normalizeArea(selectX, selectY, cursor.x, cursor.y, rotation, true, maxLength);
+                NormalizeResult result = PlaceUtils.normalizeArea(selectX, selectY, cursorX, cursorY, rotation, true, maxLength);
 
                 for(int i = 0; i <= result.getLength(); i += recipe.result.size){
-                    int x = selectX + i * Mathf.sign(cursor.x - selectX) * Mathf.bool(result.isX());
-                    int y = selectY + i * Mathf.sign(cursor.y - selectY) * Mathf.bool(!result.isX());
+                    int x = selectX + i * Mathf.sign(cursorX - selectX) * Mathf.bool(result.isX());
+                    int y = selectY + i * Mathf.sign(cursorY - selectY) * Mathf.bool(!result.isX());
 
                     rotation = result.rotation;
 
                     tryPlaceBlock(x, y);
                 }
             }else if(mode == breaking){ //touch up while breaking, break everything in selection
-                NormalizeResult result = PlaceUtils.normalizeArea(selectX, selectY, cursor.x, cursor.y, rotation, false, maxLength);
+                NormalizeResult result = PlaceUtils.normalizeArea(selectX, selectY, cursorX, cursorY, rotation, false, maxLength);
                 for(int x = 0; x <= Math.abs(result.x2 - result.x); x++){
                     for(int y = 0; y <= Math.abs(result.y2 - result.y); y++){
-                        int wx = selectX + x * Mathf.sign(cursor.x - selectX);
-                        int wy = selectY + y * Mathf.sign(cursor.y - selectY);
+                        int wx = selectX + x * Mathf.sign(cursorX - selectX);
+                        int wy = selectY + y * Mathf.sign(cursorY - selectY);
 
                         tryBreakBlock(wx, wy);
                     }
                 }
             }
 
-            tryDropItems(cursor.target(), Graphics.mouseWorld().x, Graphics.mouseWorld().y);
+            if(selected != null){
+                tryDropItems(selected.target(), Graphics.mouseWorld().x, Graphics.mouseWorld().y);
+            }
 
             mode = none;
         }
@@ -266,13 +272,18 @@ public class DesktopInput extends InputHandler{
     }
 
     @Override
+    public boolean selectedBlock(){
+        return isPlacing() && mode != breaking;
+    }
+
+    @Override
     public float getMouseX(){
-        return !controlling ? control.gdxInput().getX() : controlx;
+        return !controlling ? Gdx.input.getX() : controlx;
     }
 
     @Override
     public float getMouseY(){
-        return !controlling ? control.gdxInput().getY() : controly;
+        return !controlling ? Gdx.input.getY() : controly;
     }
 
     @Override
@@ -282,6 +293,8 @@ public class DesktopInput extends InputHandler{
 
     @Override
     public void updateController(){
+        //TODO no controller support
+        //TODO move controller input to new class, ControllerInput
         boolean mousemove = Gdx.input.getDeltaX() > 1 || Gdx.input.getDeltaY() > 1;
 
         if(state.is(State.menu)){
@@ -292,14 +305,6 @@ public class DesktopInput extends InputHandler{
             if(player.playerIndex > 0){
                 controlling = true;
             }
-            /*
-            if(Inputs.keyTap(section,"select")){
-                Inputs.getProcessor().touchDown((int)getMouseX(), (int)getMouseY(), player.playerIndex, Buttons.LEFT);
-            }
-
-            if(Inputs.keyRelease(section,"select")){
-                Inputs.getProcessor().touchUp((int)getMouseX(), (int)getMouseY(), player.playerIndex, Buttons.LEFT);
-            }*/
 
             float xa = Inputs.getAxis(section, "cursor_x");
             float ya = Inputs.getAxis(section, "cursor_y");
@@ -325,8 +330,8 @@ public class DesktopInput extends InputHandler{
         }
 
         if(!controlling){
-            controlx = control.gdxInput().getX();
-            controly = control.gdxInput().getY();
+            controlx = Gdx.input.getX();
+            controly = Gdx.input.getY();
         }
     }
 

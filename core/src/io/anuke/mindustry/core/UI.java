@@ -3,6 +3,7 @@ package io.anuke.mindustry.core;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.graphics.Colors;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.utils.Align;
 import io.anuke.mindustry.Vars;
@@ -25,9 +26,6 @@ import io.anuke.ucore.scene.ui.TextField.TextFieldFilter;
 import io.anuke.ucore.scene.ui.TooltipManager;
 import io.anuke.ucore.scene.ui.layout.Table;
 import io.anuke.ucore.scene.ui.layout.Unit;
-import io.anuke.ucore.util.Mathf;
-
-import java.util.Locale;
 
 import static io.anuke.mindustry.Vars.*;
 import static io.anuke.ucore.scene.actions.Actions.*;
@@ -39,7 +37,6 @@ public class UI extends SceneModule{
     public final PlayerListFragment listfrag = new PlayerListFragment();
     public final BackgroundFragment backfrag = new BackgroundFragment();
     public final LoadingFragment loadfrag = new LoadingFragment();
-    public final DebugFragment debugfrag = new DebugFragment();
 
     public AboutDialog about;
     public RestartDialog restart;
@@ -64,13 +61,11 @@ public class UI extends SceneModule{
     public SectorsDialog sectors;
     public MissionDialog missions;
 
-    private Locale lastLocale;
-
     public UI(){
         Dialog.setShowAction(() -> sequence(
             alpha(0f),
             originCenter(),
-            moveToAligned(Gdx.graphics.getWidth() / 2, Gdx.graphics.getHeight() / 2, Align.center),
+            moveToAligned(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() / 2f, Align.center),
             scaleTo(0.0f, 1f),
             parallel(
                 scaleTo(1f, 1f, 0.1f, Interpolation.fade),
@@ -113,18 +108,15 @@ public class UI extends SceneModule{
     @Override
     protected void loadSkin(){
         skin = new Skin(Gdx.files.internal("ui/uiskin.json"), Core.atlas);
-        Mathf.each(font -> {
+
+        for(BitmapFont font : skin.getAll(BitmapFont.class).values()){
             font.setUseIntegerPositions(false);
             font.getData().setScale(Vars.fontScale);
-            font.getData().down += Unit.dp.scl(4f);
-            font.getData().lineHeight -= Unit.dp.scl(4.3f);
-        }, skin.font(), skin.getFont("default-font-chat"), skin.getFont("korean"), skin.getFont("trad-chinese"), skin.getFont("simp-chinese"));
+        }
     }
 
     @Override
-    public synchronized void update(){
-        if(Vars.debug && !Vars.showUI) return;
-
+    public void update(){
         if(Graphics.drawing()) Graphics.end();
 
         act();
@@ -175,18 +167,12 @@ public class UI extends SceneModule{
         Group group = Core.scene.getRoot();
 
         backfrag.build(group);
+        control.input(0).getFrag().build(Core.scene.getRoot());
         hudfrag.build(group);
         menufrag.build(group);
         chatfrag.container().build(group);
         listfrag.build(group);
-        debugfrag.build(group);
         loadfrag.build(group);
-
-    }
-
-    @Override
-    public boolean hasMouse(){
-        return super.hasMouse();
     }
 
     @Override
@@ -196,29 +182,11 @@ public class UI extends SceneModule{
         Events.fire(new ResizeEvent());
     }
 
-    public Locale getLocale(){
-        String loc = Settings.getString("locale");
-        if(loc.equals("default")){
-            return Locale.getDefault();
-        }else{
-            if(lastLocale == null || !lastLocale.toString().equals(loc)){
-                if(loc.contains("_")){
-                    String[] split = loc.split("_");
-                    lastLocale = new Locale(split[0], split[1]);
-                }else{
-                    lastLocale = new Locale(loc);
-                }
-            }
-
-            return lastLocale;
-        }
+    public void loadGraphics(Runnable call){
+        loadGraphics("$text.loading", call);
     }
 
-    public void loadAnd(Runnable call){
-        loadAnd("$text.loading", call);
-    }
-
-    public void loadAnd(String text, Runnable call){
+    public void loadGraphics(String text, Runnable call){
         loadfrag.show(text);
         Timers.runTask(7f, () -> {
             call.run();
@@ -232,12 +200,11 @@ public class UI extends SceneModule{
 
     public void loadLogic(String text, Runnable call){
         loadfrag.show(text);
-        Timers.runTask(7f, () -> {
+        Timers.runTask(7f, () ->
             threads.run(() -> {
                 call.run();
                 threads.runGraphics(loadfrag::hide);
-            });
-        });
+            }));
     }
 
     public void showTextInput(String title, String text, String def, TextFieldFilter filter, Consumer<String> confirmed){
@@ -273,6 +240,17 @@ public class UI extends SceneModule{
             getCell(content()).growX();
             content().margin(15).add(info).width(400f).wrap().get().setAlignment(Align.center, Align.center);
             buttons().addButton("$text.ok", this::hide).size(90, 50).pad(4);
+        }}.show();
+    }
+
+    public void showInfo(String info, Runnable clicked){
+        new Dialog("$text.info.title", "dialog"){{
+            getCell(content()).growX();
+            content().margin(15).add(info).width(400f).wrap().get().setAlignment(Align.center, Align.center);
+            buttons().addButton("$text.ok", () -> {
+                clicked.run();
+                hide();
+            }).size(90, 50).pad(4);
         }}.show();
     }
 

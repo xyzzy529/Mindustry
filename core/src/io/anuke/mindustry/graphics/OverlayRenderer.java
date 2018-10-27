@@ -11,7 +11,6 @@ import io.anuke.mindustry.game.Team;
 import io.anuke.mindustry.input.InputHandler;
 import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.Tile;
-import io.anuke.mindustry.world.blocks.storage.CoreBlock.CoreEntity;
 import io.anuke.mindustry.world.meta.BlockBar;
 import io.anuke.ucore.core.Graphics;
 import io.anuke.ucore.core.Timers;
@@ -29,6 +28,10 @@ public class OverlayRenderer{
         for(Player player : players){
             InputHandler input = control.input(player.playerIndex);
 
+            if(world.getSector() != null){
+                world.getSector().currentMission().drawOverlay();
+            }
+
             if(!input.isDrawing() || player.isDead()) continue;
 
             Shaders.outline.color.set(Palette.accent);
@@ -43,7 +46,7 @@ public class OverlayRenderer{
     public void drawTop(){
 
         for(Player player : players){
-            if(player.isDead()) continue; //dead player don't draw
+            if(player.isDead()) continue; //dead players don't draw
 
             InputHandler input = control.input(player.playerIndex);
 
@@ -77,28 +80,10 @@ public class OverlayRenderer{
                 }
             }
 
-            for(Team enemy : state.teams.enemiesOf(player.getTeam())){
-                synchronized (Tile.tileSetLock){
-                    for(Tile core : state.teams.get(enemy).cores){
-                        CoreEntity entity = core.entity();
-
-                        if(entity.shieldHeat > 0.01f){
-                            Draw.alpha(1f);
-                            Draw.tint(Color.DARK_GRAY);
-                            Lines.stroke(entity.shieldHeat * 2f);
-                            Lines.poly(core.drawx(), core.drawy() - 2, 200, state.mode.enemyCoreShieldRadius);
-                            Draw.tint(Palette.accent, enemy.color, 1f-entity.shieldHeat);
-                            Lines.poly(core.drawx(), core.drawy(), 200, state.mode.enemyCoreShieldRadius);
-                        }
-                        entity.shieldHeat = Mathf.lerpDelta(entity.shieldHeat, 0f, 0.1f);
-                    }
-                }
-            }
-
             Draw.reset();
 
             //draw selected block bars and info
-            if(input.recipe == null && !ui.hasMouse() && !input.frag.config.isShown()){
+            if(input.recipe == null && !ui.hasMouse()){
                 Vector2 vec = Graphics.world(input.getMouseX(), input.getMouseY());
                 Tile tile = world.tileWorld(vec.x, vec.y);
 

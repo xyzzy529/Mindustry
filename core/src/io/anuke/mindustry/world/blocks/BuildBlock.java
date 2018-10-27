@@ -22,7 +22,7 @@ import io.anuke.mindustry.world.BarType;
 import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.world.meta.BlockBar;
-import io.anuke.mindustry.world.modules.InventoryModule;
+import io.anuke.mindustry.world.modules.ItemModule;
 import io.anuke.ucore.core.Effects;
 import io.anuke.ucore.core.Graphics;
 import io.anuke.ucore.graphics.Draw;
@@ -35,6 +35,7 @@ import java.io.IOException;
 import static io.anuke.mindustry.Vars.*;
 
 public class BuildBlock extends Block{
+
     public BuildBlock(String name){
         super(name);
         update = true;
@@ -57,12 +58,13 @@ public class BuildBlock extends Block{
         tile.setRotation(rotation);
         world.setBlock(tile, block, team);
         Effects.effect(Fx.placeBlock, tile.drawx(), tile.drawy(), block.size);
+        threads.runDelay(() -> tile.block().placed(tile));
 
         //last builder was this local client player, call placed()
         if(!headless && builderID == players[0].id){
             //this is run delayed, since if this is called on the server, all clients need to recieve the onBuildFinish()
             //event first before they can recieve the placed() event modification results
-            threads.runDelay(() -> tile.block().placed(tile));
+            threads.runDelay(() -> tile.block().playerPlaced(tile));
         }
     }
 
@@ -140,7 +142,7 @@ public class BuildBlock extends Block{
 
         for(TextureRegion region : target.getBlockIcon()){
             Shaders.blockbuild.region = region;
-            Shaders.blockbuild.progress = (float) entity.progress;
+            Shaders.blockbuild.progress = entity.progress;
             Shaders.blockbuild.apply();
 
             Draw.rect(region, tile.drawx(), tile.drawy(), target.rotate ? tile.getRotation() * 90 : 0);
@@ -164,12 +166,7 @@ public class BuildBlock extends Block{
     }
 
     @Override
-    public void update(Tile tile){
-
-    }
-
-    @Override
-    public TileEntity getEntity(){
+    public TileEntity newEntity(){
         return new BuildEntity();
     }
 
@@ -213,7 +210,7 @@ public class BuildBlock extends Block{
                 builderID = builder.getID();
             }
             
-            if(progress >= 1f || debug || state.mode.infiniteResources){
+            if(progress >= 1f || state.mode.infiniteResources){
                 Call.onConstructFinish(tile, recipe.result, builderID, tile.getRotation(), builder.getTeam());
             }
         }
@@ -244,12 +241,12 @@ public class BuildBlock extends Block{
 
             progress = Mathf.clamp(progress - amount);
 
-            if(progress <= 0 || debug || state.mode.infiniteResources){
+            if(progress <= 0 || state.mode.infiniteResources){
                 Call.onDeconstructFinish(tile, this.recipe == null ? previous : this.recipe.result);
             }
         }
 
-        private float checkRequired(InventoryModule inventory, float amount, boolean remove){
+        private float checkRequired(ItemModule inventory, float amount, boolean remove){
             float maxProgress = amount;
 
             for(int i = 0; i < recipe.requirements.length; i++){
@@ -339,6 +336,12 @@ public class BuildBlock extends Block{
 
             if(pid != -1) previous = content.block(pid);
             if(rid != -1) recipe = Recipe.getByResult(content.block(rid));
+
+            if(recipe != null){
+                buildCost = recipe.cost;
+            }else{
+                buildCost = 20f;
+            }
         }
     }
 }

@@ -5,6 +5,7 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.badlogic.gdx.utils.OrderedMap;
 import io.anuke.mindustry.Vars;
+import io.anuke.mindustry.game.GameMode;
 import io.anuke.mindustry.game.UnlockableContent;
 import io.anuke.mindustry.ui.ContentDisplay;
 import io.anuke.mindustry.world.Block;
@@ -28,9 +29,11 @@ public class Recipe extends UnlockableContent{
     public final Category category;
     public final float cost;
 
-    public boolean desktopOnly = false, debugOnly = false;
+    public RecipeVisibility visibility = RecipeVisibility.all;
     //the only gamemode in which the recipe shows up
-    public boolean isPad;
+    public GameMode mode;
+    public boolean hidden;
+    public boolean alwaysUnlocked;
 
     private UnlockableContent[] dependencies;
     private Block[] blockDependencies;
@@ -56,15 +59,16 @@ public class Recipe extends UnlockableContent{
      * Returns unlocked recipes in a category.
      * Do not call on the server backend, as unlocking does not exist!
      */
-    public static void getUnlockedByCategory(Category category, Array<Recipe> r){
+    public static void getUnlockedByCategory(Category category, Array<Recipe> arr){
         if(headless){
-            throw new RuntimeException("Not enabled on the headless backend!");
+            throw new RuntimeException("Not implemented on the headless backend!");
         }
 
-        r.clear();
-        for(Recipe recipe : content.recipes()){
-            if(recipe.category == category && (Vars.control.database().isUnlocked(recipe) || (debug && recipe.debugOnly))){
-                r.add(recipe);
+        arr.clear();
+        for(Recipe r : content.recipes()){
+            if(r.category == category && (control.unlocks.isUnlocked(r)) &&
+            !((r.mode != null && r.mode != state.mode) || !r.visibility.shown())){
+                arr.add(r);
             }
         }
     }
@@ -85,24 +89,35 @@ public class Recipe extends UnlockableContent{
         return recipeMap.get(block);
     }
 
-    public Recipe setPad(){
-        this.isPad = true;
+    public Recipe setVisible(RecipeVisibility visibility){
+        this.visibility = visibility;
         return this;
     }
 
-    public Recipe setDesktop(){
-        desktopOnly = true;
+    public Recipe setMode(GameMode mode){
+        this.mode = mode;
         return this;
     }
 
-    public Recipe setDebug(){
-        debugOnly = true;
+    public Recipe setHidden(boolean hidden){
+        this.hidden = hidden;
         return this;
+    }
+
+    public Recipe setAlwaysUnlocked(boolean unlocked){
+        this.alwaysUnlocked = unlocked;
+        return this;
+    }
+
+
+    @Override
+    public boolean alwaysUnlocked(){
+        return alwaysUnlocked;
     }
 
     @Override
     public boolean isHidden(){
-        return debugOnly || (desktopOnly && mobile);
+        return !visibility.shown() || hidden;
     }
 
     @Override
@@ -148,7 +163,7 @@ public class Recipe extends UnlockableContent{
                     ContentStatValue stat = (ContentStatValue) value;
                     UnlockableContent[] content = stat.getValueContent();
                     for(UnlockableContent c : content){
-                        control.database().unlockContent(c);
+                        control.unlocks.unlockContent(c);
                     }
                 }
             }
@@ -175,5 +190,22 @@ public class Recipe extends UnlockableContent{
     public Recipe setDependencies(Block... dependencies){
         this.blockDependencies = dependencies;
         return this;
+    }
+
+    public enum RecipeVisibility{
+        mobileOnly(true, false),
+        desktopOnly(false, true),
+        all(true, true);
+
+        public final boolean mobile, desktop;
+
+        RecipeVisibility(boolean mobile, boolean desktop){
+            this.mobile = mobile;
+            this.desktop = desktop;
+        }
+
+        public boolean shown(){
+            return (Vars.mobile && mobile) || (!Vars.mobile && desktop);
+        }
     }
 }

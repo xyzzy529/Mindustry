@@ -24,6 +24,11 @@ public abstract class UnlockableContent extends MappableContent{
         return false;
     }
 
+    /**Override to make content always unlocked.*/
+    public boolean alwaysUnlocked(){
+        return false;
+    }
+
     /**Lists the content that must be unlocked in order for this specific content to become unlocked. May return null.*/
     public UnlockableContent[] getDependencies(){
         return null;
@@ -36,7 +41,7 @@ public abstract class UnlockableContent extends MappableContent{
             return true;
         }else{
             for(UnlockableContent cont : depend){
-                if(!control.database().isUnlocked(cont)){
+                if(!control.unlocks.isUnlocked(cont)){
                     return false;
                 }
             }

@@ -1,5 +1,6 @@
 package io.anuke.mindustry.world.blocks.distribution;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.ObjectSet;
 import com.badlogic.gdx.utils.Pool.Poolable;
@@ -7,11 +8,11 @@ import io.anuke.annotations.Annotations.Loc;
 import io.anuke.annotations.Annotations.Remote;
 import io.anuke.mindustry.content.bullets.TurretBullets;
 import io.anuke.mindustry.content.fx.BlockFx;
+import io.anuke.mindustry.content.fx.EnvironmentFx;
 import io.anuke.mindustry.content.fx.ShootFx;
 import io.anuke.mindustry.entities.Player;
 import io.anuke.mindustry.entities.TileEntity;
 import io.anuke.mindustry.entities.bullet.Bullet;
-import io.anuke.mindustry.entities.effect.ItemDrop;
 import io.anuke.mindustry.gen.Call;
 import io.anuke.mindustry.graphics.Layer;
 import io.anuke.mindustry.graphics.Palette;
@@ -82,8 +83,11 @@ public class MassDriver extends Block{
         DriverBulletData data = Pooling.obtain(DriverBulletData.class, DriverBulletData::new);
         data.from = entity;
         data.to = other;
+        int totalUsed = 0;
         for(int i = 0; i < content.items().size; i++){
-            data.items[i] = entity.items.get(content.item(i));
+            int maxTransfer = Math.min(entity.items.get(content.item(i)), ((MassDriver) tile.block()).itemCapacity - totalUsed);
+            data.items[i] = maxTransfer;
+            totalUsed += maxTransfer;
         }
         entity.items.clear();
 
@@ -149,6 +153,11 @@ public class MassDriver extends Block{
             entity.reload = Mathf.clamp(entity.reload - entity.delta() / reloadTime);
         }
 
+        //unload when dest is full
+        if(!linkValid(tile) || (link.entity.items.total() >= itemCapacity) && entity.items.total() > 0){
+            entity.isUnloading = true;
+        }
+
         if(!entity.isRecieving){
 
             if(entity.waiting.size > 0){ //accepting takes priority over shooting
@@ -157,7 +166,7 @@ public class MassDriver extends Block{
                 entity.rotation = Mathf.slerpDelta(entity.rotation, tile.angleTo(waiter), rotateSpeed);
             }else if(tile.entity.items.total() >= minDistribute &&
                     linkValid(tile) && //only fire when at least at half-capacity and power
-                    tile.entity.power.amount >= powerCapacity &&
+                    tile.entity.power.amount >= powerCapacity * 0.8f &&
                     link.block().itemCapacity - link.entity.items.total() >= minDistribute && entity.reload <= 0.0001f){
 
                 MassDriverEntity other = link.entity();
@@ -233,7 +242,15 @@ public class MassDriver extends Block{
     }
 
     @Override
-    public TileEntity getEntity(){
+    public void transformLinks(Tile tile, int oldWidth, int oldHeight, int newWidth, int newHeight, int shiftX, int shiftY){
+        super.transformLinks(tile, oldWidth, oldHeight, newWidth, newHeight, shiftX, shiftY);
+
+        MassDriverEntity entity = tile.entity();
+        entity.link = world.transform(entity.link, oldWidth, oldHeight, newWidth, shiftX, shiftY);
+    }
+
+    @Override
+    public TileEntity newEntity(){
         return new MassDriverEntity();
     }
 
@@ -273,12 +290,12 @@ public class MassDriver extends Block{
 
             //add all the items possible
             for(int i = 0; i < data.items.length; i++){
-                int maxAdd = Math.min(data.items[i], itemCapacity - totalItems);
+                int maxAdd = Math.min(data.items[i], itemCapacity*2 - totalItems);
                 items.add(content.item(i), maxAdd);
                 data.items[i] -= maxAdd;
                 totalItems += maxAdd;
 
-                if(totalItems >= itemCapacity){
+                if(totalItems >= itemCapacity*2){
                     break;
                 }
             }
@@ -288,8 +305,7 @@ public class MassDriver extends Block{
                 int amountDropped = Mathf.random(0, data.items[i]);
                 if(amountDropped > 0){
                     float angle = Mathf.range(180f);
-                    float vs = Mathf.random(0f, 4f);
-                    ItemDrop.create(content.item(i), amountDropped, bullet.x, bullet.y, Angles.trnsx(angle, vs), Angles.trnsy(angle, vs));
+                    Effects.effect(EnvironmentFx.dropItem, Color.WHITE, bullet.x, bullet.y, angle, content.item(i));
                 }
             }
 
@@ -308,11 +324,13 @@ public class MassDriver extends Block{
         @Override
         public void write(DataOutputStream stream) throws IOException{
             stream.writeInt(link);
+            stream.writeFloat(rotation);
         }
 
         @Override
         public void read(DataInputStream stream) throws IOException{
             link = stream.readInt();
+            rotation = stream.readFloat();
         }
     }
 }

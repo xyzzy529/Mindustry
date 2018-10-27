@@ -9,7 +9,6 @@ import io.anuke.mindustry.entities.Player;
 import io.anuke.mindustry.entities.TileEntity;
 import io.anuke.mindustry.entities.bullet.Bullet;
 import io.anuke.mindustry.entities.effect.Fire;
-import io.anuke.mindustry.entities.effect.ItemDrop;
 import io.anuke.mindustry.entities.effect.Puddle;
 import io.anuke.mindustry.entities.traits.SyncTrait;
 import io.anuke.mindustry.entities.units.BaseUnit;
@@ -29,24 +28,28 @@ import io.anuke.ucore.util.Translator;
 import java.util.Arrays;
 import java.util.Locale;
 
+@SuppressWarnings("unchecked")
 public class Vars{
+    public static final String appName = "Mindustry";
+    public static final String discordURL = "https://discord.gg/mindustry";
+    public static final String releasesURL = "https://api.github.com/repos/Anuken/Mindustry/releases";
+    public static final String crashReportURL = "http://mindustry.us.to/report";
     //time between waves in frames (on normal mode)
     public static final float wavespace = 60 * 60 * 1.5f;
+
+    public static final float mineTransferRange = 220f;
     //set ridiculously high for now
     public static final float coreBuildRange = 999999f;
     //team of the player by default
     public static final Team defaultTeam = Team.blue;
     //team of the enemy in waves
     public static final Team waveTeam = Team.red;
-
-    public static final String discordURL = "https://discord.gg/mindustry";
-    public static final String releasesURL = "https://api.github.com/repos/Anuken/Mindustry/releases";
-    public static final String crashReportURL = "http://mindustry.us.to/report";
+    public static final float unlockResourceScaling = 1f;
     public static final int maxTextLength = 150;
     public static final int maxNameLength = 40;
     public static final float itemSize = 5f;
     public static final int tilesize = 8;
-    public static final int sectorSize = 300;
+    public static final int sectorSize = 250;
     public static final int mapPadding = 3;
     public static final int invalidSector = Integer.MAX_VALUE;
     public static Locale[] locales;
@@ -89,26 +92,11 @@ public class Vars{
     public static float fontScale;
     //camera zoom displayed on startup
     public static int baseCameraScale;
-    //if true, player speed will be increased, massive amounts of resources will be given on start, and other debug options will be available
-    public static boolean debug = false;
-    public static boolean console = false;
-    //whether the player can clip through walls
-    public static boolean noclip = false;
-    //whether turrets have infinite ammo (only with debug)
-    public static boolean infiniteAmmo = true;
-    //whether to show paths of enemies
-    public static boolean showPaths = false;
-    //if false, player is always hidden
-    public static boolean showPlayer = true;
-    //whether to hide ui, only on debug
-    public static boolean showUI = true;
-    //whether to show block debug
     public static boolean showBlockDebug = false;
     public static boolean showFog = true;
     public static boolean headless = false;
     public static float controllerMin = 0.25f;
     public static float baseControllerSpeed = 11f;
-    //only if smoothCamera
     public static boolean snapCamera = true;
     public static ContentLoader content;
     public static GameState state;
@@ -129,7 +117,6 @@ public class Vars{
     public static EntityGroup<Bullet> bulletGroup;
     public static EntityGroup<EffectEntity> effectGroup;
     public static EntityGroup<DrawTrait> groundEffectGroup;
-    public static EntityGroup<ItemDrop> itemGroup;
     public static EntityGroup<ShieldEntity> shieldGroup;
     public static EntityGroup<Puddle> puddleGroup;
     public static EntityGroup<Fire> fireGroup;
@@ -153,7 +140,6 @@ public class Vars{
         }
 
         Arrays.sort(locales, (l1, l2) -> Platform.instance.getLocaleName(l1).compareTo(Platform.instance.getLocaleName(l2)));
-
         Version.init();
 
         content = new ContentLoader();
@@ -164,7 +150,6 @@ public class Vars{
         effectGroup = Entities.addGroup(EffectEntity.class, false);
         groundEffectGroup = Entities.addGroup(DrawTrait.class, false);
         puddleGroup = Entities.addGroup(Puddle.class).enableMapping();
-        itemGroup = Entities.addGroup(ItemDrop.class).enableMapping();
         shieldGroup = Entities.addGroup(ShieldEntity.class, false);
         fireGroup = Entities.addGroup(Fire.class).enableMapping();
         unitGroups = new EntityGroup[Team.all.length];
@@ -189,7 +174,7 @@ public class Vars{
         gwt = Gdx.app.getType() == ApplicationType.WebGL;
 
         if(!gwt){
-            dataDirectory = OS.getAppDataDirectory("Mindustry");
+            dataDirectory = OS.getAppDataDirectory(appName);
             customMapDirectory = dataDirectory.child("maps/");
             saveDirectory = dataDirectory.child("saves/");
         }

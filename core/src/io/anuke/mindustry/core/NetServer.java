@@ -6,6 +6,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
+import com.badlogic.gdx.utils.ObjectSet;
 import com.badlogic.gdx.utils.TimeUtils;
 import io.anuke.annotations.Annotations.Loc;
 import io.anuke.annotations.Annotations.Remote;
@@ -26,11 +27,12 @@ import io.anuke.mindustry.world.Tile;
 import io.anuke.ucore.core.Timers;
 import io.anuke.ucore.entities.Entities;
 import io.anuke.ucore.entities.EntityGroup;
-import io.anuke.ucore.entities.EntityPhysics;
+import io.anuke.ucore.entities.EntityQuery;
 import io.anuke.ucore.entities.trait.Entity;
 import io.anuke.ucore.io.ByteBufferOutput;
 import io.anuke.ucore.io.CountableByteArrayOutputStream;
 import io.anuke.ucore.modules.Module;
+import io.anuke.ucore.util.Structs;
 import io.anuke.ucore.util.Log;
 import io.anuke.ucore.util.Mathf;
 
@@ -56,7 +58,7 @@ public class NetServer extends Module{
     private final static Vector2 vector = new Vector2();
     private final static Rectangle viewport = new Rectangle();
     private final static Array<Entity> returnArray = new Array<>();
-    /**If a play goes away of their server-side coordinates by this distance, they get teleported back.*/
+    /**If a player goes away of their server-side coordinates by this distance, they get teleported back.*/
     private final static float correctDist = 16f;
 
     public final Administration admins = new Administration();
@@ -125,7 +127,7 @@ public class NetServer extends Module{
                 return;
             }
 
-            boolean preventDuplicates = headless && !debug;
+            boolean preventDuplicates = headless && netServer.admins.getStrict();
 
             if(preventDuplicates){
                 for(Player player : playerGroup.all()){
@@ -187,7 +189,7 @@ public class NetServer extends Module{
 
             if(state.mode.isPvp){
                 //find team with minimum amount of players and auto-assign player to that.
-                Team min = Mathf.findMin(Team.all, team -> {
+                Team min = Structs.findMin(Team.all, team -> {
                     if(state.teams.isActive(team)){
                         int count = 0;
                         for(Player other : playerGroup.all()){
@@ -200,6 +202,7 @@ public class NetServer extends Module{
                     return Integer.MAX_VALUE;
                 });
                 player.setTeam(min);
+                Log.info("Auto-assigned player {0} to team {1}.", player.name, player.getTeam());
             }
 
             connections.put(id, player);
@@ -216,15 +219,6 @@ public class NetServer extends Module{
             if(player == null) return;
             RemoteReadServer.readPacket(packet.writeBuffer, packet.type, player);
         });
-    }
-
-    private static float compound(float speed, float drag){
-        float total = 0f;
-        for(int i = 0; i < 20; i++){
-            total *= (1f - drag);
-            total += speed;
-        }
-        return total;
     }
 
     /** Sends a raw byte[] snapshot to a client, splitting up into chunks when needed.*/
@@ -286,6 +280,15 @@ public class NetServer extends Module{
         netServer.connections.remove(player.con.id);
     }
 
+    private static float compound(float speed, float drag){
+        float total = 0f;
+        for(int i = 0; i < 50; i++){
+            total *= (1f - drag);
+            total += speed;
+        }
+        return total;
+    }
+
     @Remote(targets = Loc.client, unreliable = true)
     public static void onClientShapshot(
         Player player,
@@ -295,14 +298,14 @@ public class NetServer extends Module{
         float rotation, float baseRotation,
         float xVelocity, float yVelocity,
         Tile mining,
-        boolean boosting, boolean shooting, boolean alting,
+        boolean boosting, boolean shooting,
         BuildRequest[] requests,
         float viewX, float viewY, float viewWidth, float viewHeight
     ){
         NetConnection connection = player.con;
         if(connection == null || snapshotID < connection.lastRecievedClientSnapshot) return;
 
-        boolean verifyPosition = !player.isDead() && !debug && headless && player.getCarrier() == null;
+        boolean verifyPosition = !player.isDead() && netServer.admins.getStrict() && headless && player.getCarrier() == null;
 
         if(connection.lastRecievedClientTime == 0) connection.lastRecievedClientTime = TimeUtils.millis() - 16;
 
@@ -314,14 +317,13 @@ public class NetServer extends Module{
         long elapsed = TimeUtils.timeSinceMillis(connection.lastRecievedClientTime);
 
         float maxSpeed = boosting && !player.mech.flying ? player.mech.boostSpeed : player.mech.speed;
-        float maxMove = elapsed / 1000f * 60f * Math.min(compound(maxSpeed, player.mech.drag) * 1.2f, player.mech.maxSpeed * 1.05f);
+        float maxMove = elapsed / 1000f * 60f * Math.min(compound(maxSpeed, player.mech.drag) * 1.25f, player.mech.maxSpeed * 1.1f);
 
         player.pointerX = pointerX;
         player.pointerY = pointerY;
         player.setMineTile(mining);
         player.isBoosting = boosting;
         player.isShooting = shooting;
-        player.isAlt = alting;
         player.getPlaceQueue().clear();
         for(BuildRequest req : requests){
             //auto-skip done requests
@@ -413,6 +415,10 @@ public class NetServer extends Module{
         Log.info("&y{0} has connected.", player.name);
     }
 
+    public boolean isWaitingForPlayers(){
+        return state.mode.isPvp && playerGroup.size() < 2;
+    }
+
     public void update(){
         if(threads.isEnabled() && !threads.isOnThread()) return;
 
@@ -473,7 +479,7 @@ public class NetServer extends Module{
         dataStream.writeFloat(state.wavetime);
         dataStream.writeInt(state.wave);
 
-        Array<Tile> cores = state.teams.get(player.getTeam()).cores;
+        ObjectSet<Tile> cores = state.teams.get(player.getTeam()).cores;
 
         dataStream.writeByte(cores.size);
 
@@ -508,7 +514,7 @@ public class NetServer extends Module{
 
             returnArray.clear();
             if(represent.isClipped()){
-                EntityPhysics.getNearby(group, viewport, entity -> {
+                EntityQuery.getNearby(group, viewport, entity -> {
                     if(((SyncTrait) entity).isSyncing() && viewport.contains(entity.getX(), entity.getY())){
                         returnArray.add(entity);
                     }

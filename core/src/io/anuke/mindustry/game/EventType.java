@@ -6,6 +6,14 @@ import io.anuke.ucore.function.Event;
 
 public class EventType{
 
+    public static class SectorCompleteEvent implements Event{
+
+    }
+
+    public static class GameLoadEvent implements Event{
+
+    }
+
     public static class PlayEvent implements Event{
 
     }
@@ -19,7 +27,11 @@ public class EventType{
     }
 
     public static class GameOverEvent implements Event{
+        public final Team winner;
 
+        public GameOverEvent(Team winner){
+            this.winner = winner;
+        }
     }
 
     /**
@@ -38,9 +50,7 @@ public class EventType{
 
     }
 
-    /**
-     * Called from the logic thread. Do not access graphics here!
-     */
+    /**Called from the logic thread. Do not access graphics here!*/
     public static class TileChangeEvent implements Event{
         public final Tile tile;
 
@@ -66,6 +76,7 @@ public class EventType{
         }
     }
 
+    /**Called when block building begins. The tile's block will nearly always be a BuildBlock.*/
     public static class BlockBuildEvent implements Event{
         public final Tile tile;
         public final Team team;

@@ -8,20 +8,14 @@ import io.anuke.mindustry.game.ContentList;
 import io.anuke.mindustry.type.ContentType;
 
 public class UnitTypes implements ContentList{
-    public static UnitType drone, alphaDrone, dagger, interceptor, monsoon, titan, fortress, fabricator;
+    public static UnitType
+        spirit, phantom,
+        alphaDrone,
+        wraith, ghoul, revenant,
+        dagger, titan, fortress;
 
     @Override
     public void load(){
-        drone = new UnitType("drone", Drone.class, Drone::new){{
-            isFlying = true;
-            drag = 0.01f;
-            speed = 0.2f;
-            maxVelocity = 0.8f;
-            range = 50f;
-            healSpeed = 0.05f;
-            health = 60;
-        }};
-
         alphaDrone = new UnitType("alpha-drone", AlphaDrone.class, AlphaDrone::new){
             {
                 isFlying = true;
@@ -30,6 +24,8 @@ public class UnitTypes implements ContentList{
                 maxVelocity = 1.7f;
                 range = 40f;
                 health = 45;
+                hitsize = 4f;
+                mass = 0.1f;
                 weapon = Weapons.droneBlaster;
                 trailColor = Color.valueOf("ffd37f");
             }
@@ -40,54 +36,87 @@ public class UnitTypes implements ContentList{
             }
         };
 
+        spirit = new UnitType("spirit", Spirit.class, Spirit::new){{
+            isFlying = true;
+            drag = 0.01f;
+            speed = 0.2f;
+            maxVelocity = 0.8f;
+            range = 50f;
+            healSpeed = 0.22f;
+            health = 60;
+        }};
+
         dagger = new UnitType("dagger", Dagger.class, Dagger::new){{
             maxVelocity = 1.1f;
             speed = 0.2f;
             drag = 0.4f;
-            range = 40f;
+            hitsize = 8f;
+            mass = 1.75f;
             weapon = Weapons.chainBlaster;
-            health = 180;
+            health = 130;
         }};
 
         titan = new UnitType("titan", Titan.class, Titan::new){{
             maxVelocity = 0.8f;
             speed = 0.18f;
             drag = 0.4f;
-            range = 10f;
+            mass = 3.5f;
+            hitsize = 9f;
+            rotatespeed = 0.1f;
             weapon = Weapons.flamethrower;
-            health = 500;
+            health = 440;
         }};
 
         fortress = new UnitType("fortress", Fortress.class, Fortress::new){{
             maxVelocity = 0.8f;
-            speed = 0.18f;
+            speed = 0.15f;
             drag = 0.4f;
-            range = 10f;
-            weapon = Weapons.flamethrower;
-            health = 500;
+            mass = 5f;
+            hitsize = 10f;
+            rotatespeed = 0.06f;
+            weaponOffsetX = 1;
+            targetAir = false;
+            weapon = Weapons.artillery;
+            health = 800;
         }};
 
-        interceptor = new UnitType("interceptor", Interceptor.class, Interceptor::new){{
+        wraith = new UnitType("wraith", Wraith.class, Wraith::new){{
             speed = 0.3f;
             maxVelocity = 1.9f;
             drag = 0.01f;
+            mass = 1.5f;
             weapon = Weapons.chainBlaster;
             isFlying = true;
             health = 70;
         }};
 
-        monsoon = new UnitType("monsoon", Monsoon.class, Monsoon::new){{
+        ghoul = new UnitType("ghoul", Ghoul.class, Ghoul::new){{
             health = 250;
             speed = 0.2f;
             maxVelocity = 1.4f;
+            mass = 3f;
             drag = 0.01f;
             isFlying = true;
+            targetAir = false;
             weapon = Weapons.bomber;
         }};
 
-        fabricator = new UnitType("fabricator", Fabricator.class, Fabricator::new){{
+        revenant = new UnitType("revenant", Revenant.class, Revenant::new){{
+            health = 250;
+            mass = 5f;
+            hitsize = 12f;
+            speed = 0.14f;
+            maxVelocity = 1.3f;
+            drag = 0.01f;
+            range = 80f;
+            isFlying = true;
+            weapon = Weapons.laserBurster;
+        }};
+
+        phantom = new UnitType("phantom", Phantom.class, Phantom::new){{
             isFlying = true;
             drag = 0.01f;
+            mass = 2f;
             speed = 0.2f;
             maxVelocity = 0.9f;
             range = 70f;
@@ -95,7 +124,7 @@ public class UnitTypes implements ContentList{
             health = 220;
             buildPower = 0.9f;
             minePower = 1.1f;
-            healSpeed = 0.09f;
+            healSpeed = 0.5f;
             toMine = ObjectSet.with(Items.lead, Items.copper, Items.titanium);
         }};
     }

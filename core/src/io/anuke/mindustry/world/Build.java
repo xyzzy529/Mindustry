@@ -11,7 +11,6 @@ import io.anuke.mindustry.type.ContentType;
 import io.anuke.mindustry.type.Recipe;
 import io.anuke.mindustry.world.blocks.BuildBlock.BuildEntity;
 import io.anuke.ucore.core.Events;
-import io.anuke.ucore.entities.Entities;
 import io.anuke.ucore.util.Geometry;
 
 import static io.anuke.mindustry.Vars.*;
@@ -109,34 +108,13 @@ public class Build{
     public static boolean validPlace(Team team, int x, int y, Block type, int rotation){
         Recipe recipe = Recipe.getByResult(type);
 
-        if(recipe == null || (recipe.debugOnly && !debug)){
+        if(recipe == null || (recipe.mode != null && recipe.mode != state.mode)){
             return false;
         }
 
-        rect.setSize(type.size * tilesize, type.size * tilesize);
-        rect.setCenter(type.offset() + x * tilesize, type.offset() + y * tilesize);
-
-        if(type.solid || type.solidifes){
-            synchronized(Entities.entityLock){
-                try{
-
-                    rect.setSize(tilesize * type.size).setCenter(x * tilesize + type.offset(), y * tilesize + type.offset());
-                    boolean[] result = {false};
-
-                    Units.getNearby(rect, e -> {
-                        if(e == null) return; //not sure why this happens?
-                        e.getHitbox(hitrect);
-
-                        if(rect.overlaps(hitrect) && !e.isFlying()){
-                            result[0] = true;
-                        }
-                    });
-
-                    if(result[0]) return false;
-                }catch(Exception e){
-                    return false;
-                }
-            }
+        if((type.solid || type.solidifes) &&
+            Units.anyEntities(rect.setSize(tilesize * type.size).setCenter(x * tilesize + type.offset(), y * tilesize + type.offset()))){
+            return false;
         }
 
         //check for enemy cores
@@ -213,8 +191,8 @@ public class Build{
     /**Returns whether the tile at this position is breakable by this team*/
     public static boolean validBreak(Team team, int x, int y){
         Tile tile = world.tile(x, y);
+        if(tile != null) tile = tile.target();
 
-        return tile != null && !tile.block().unbreakable
-                && (!tile.isLinked() || !tile.getLinked().block().unbreakable) && tile.breakable() && (tile.getTeam() == Team.none || tile.getTeam() == team);
+        return tile != null && tile.block().canBreak(tile) && tile.breakable() && (!tile.block().synthetic() || tile.getTeam() == team);
     }
 }

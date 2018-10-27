@@ -3,6 +3,7 @@ package io.anuke.mindustry.editor;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Align;
@@ -95,7 +96,7 @@ public class MapEditorDialog extends Dialog implements Disposable{
                             "$text.editor.importmap", "$text.editor.importmap.description", "icon-load-map", (Runnable) loadDialog::show,
                             "$text.editor.importfile", "$text.editor.importfile.description", "icon-file", (Runnable) () -> {
                                 Platform.instance.showFileChooser("$text.loadimage", "Map Files", file -> {
-                                    ui.loadAnd(() -> {
+                                    ui.loadGraphics(() -> {
                                         try{
                                             DataInputStream stream = new DataInputStream(file.read());
 
@@ -110,15 +111,15 @@ public class MapEditorDialog extends Dialog implements Disposable{
                                         }
                                     });
                                 }, true, mapExtension);
-                            }/*,
-						"$text.editor.importimage", "$text.editor.importimage.description", "icon-file-image", (Listenable)() -> {
+                            },
+						"$text.editor.importimage", "$text.editor.importimage.description", "icon-file-image", (Runnable)() -> {
 							if(gwt){
 								ui.showError("$text.web.unsupported");
 							}else {
 								Platform.instance.showFileChooser("$text.loadimage", "Image Files", file -> {
-									ui.loadAnd(() -> {
+									ui.loadGraphics(() -> {
 										try{
-											MapTileData data = MapIO.readPixmap(new Pixmap(file));
+											MapTileData data = MapIO.readLegacyPixmap(new Pixmap(file));
 
 											editor.beginEdit(data, editor.getTags(), false);
 											view.clearStack();
@@ -129,7 +130,7 @@ public class MapEditorDialog extends Dialog implements Disposable{
 									});
 								}, true, "png");
 							}
-						}*/));
+						}));
 
             t.addImageTextButton("$text.editor.export", "icon-save-map", isize, () -> createDialog("$text.editor.export",
                     "$text.editor.exportfile", "$text.editor.exportfile.description", "icon-file", (Runnable) () -> {
@@ -137,7 +138,7 @@ public class MapEditorDialog extends Dialog implements Disposable{
                             Platform.instance.showFileChooser("$text.saveimage", "Map Files", file -> {
                                 file = file.parent().child(file.nameWithoutExtension() + "." + mapExtension);
                                 FileHandle result = file;
-                                ui.loadAnd(() -> {
+                                ui.loadGraphics(() -> {
 
                                     try{
                                         if(!editor.getTags().containsKey("name")){
@@ -168,7 +169,7 @@ public class MapEditorDialog extends Dialog implements Disposable{
 							Platform.instance.showFileChooser("$text.saveimage", "Image Files", file -> {
 								file = file.parent().child(file.nameWithoutExtension() + ".png");
 								FileHandle result = file;
-								ui.loadAnd(() -> {
+								ui.loadGraphics(() -> {
 									try{
 										Pixmaps.write(MapIO.generatePixmap(editor.getMap()), result);
 									}catch (Exception e){
@@ -194,7 +195,7 @@ public class MapEditorDialog extends Dialog implements Disposable{
 
         resizeDialog = new MapResizeDialog(editor, (x, y) -> {
             if(!(editor.getMap().width() == x && editor.getMap().height() == y)){
-                ui.loadAnd(() -> {
+                ui.loadGraphics(() -> {
                     editor.resize(x, y);
                     view.clearStack();
                 });
@@ -203,7 +204,7 @@ public class MapEditorDialog extends Dialog implements Disposable{
 
         loadDialog = new MapLoadDialog(map -> {
 
-            ui.loadAnd(() -> {
+            ui.loadGraphics(() -> {
                 try(DataInputStream stream = new DataInputStream(map.stream.get())){
                     MapMeta meta = MapIO.readMapMeta(stream);
                     MapTileData data = MapIO.readTileData(stream, meta, false);
@@ -221,7 +222,7 @@ public class MapEditorDialog extends Dialog implements Disposable{
 
         clearChildren();
         margin(0);
-        build();
+        shown(this::build);
 
         update(() -> {
             if(Core.scene.getKeyboardFocus() instanceof Dialog && Core.scene.getKeyboardFocus() != this){
@@ -266,11 +267,11 @@ public class MapEditorDialog extends Dialog implements Disposable{
         if(name.isEmpty()){
             ui.showError("$text.editor.save.noname");
         }else{
-            Map map = world.maps().getByName(name);
+            Map map = world.maps.getByName(name);
             if(map != null && !map.custom){
                 ui.showError("$text.editor.save.overwrite");
             }else{
-                world.maps().saveMap(name, editor.getMap(), editor.getTags());
+                world.maps.saveMap(name, editor.getMap(), editor.getTags());
                 ui.showInfoFade("$text.editor.saved");
             }
         }
@@ -338,7 +339,7 @@ public class MapEditorDialog extends Dialog implements Disposable{
     }
 
     public void beginEditMap(InputStream is){
-        ui.loadAnd(() -> {
+        ui.loadGraphics(() -> {
             try{
                 shownWithMap = true;
                 DataInputStream stream = new DataInputStream(is);
@@ -381,6 +382,7 @@ public class MapEditorDialog extends Dialog implements Disposable{
         float size = mobile ? (int) (Math.min(Gdx.graphics.getHeight(), Gdx.graphics.getWidth()) / amount / Unit.dp.scl(1f)) :
                 Math.min(Gdx.graphics.getDisplayMode().height / amount, baseSize);
 
+        clearChildren();
         table(cont -> {
             cont.left();
 
@@ -567,16 +569,12 @@ public class MapEditorDialog extends Dialog implements Disposable{
 
         for(Block block : Vars.content.blocks()){
             TextureRegion[] regions = block.getCompactIcon();
-            if((block.synthetic() && (Recipe.getByResult(block) == null || !control.database().isUnlocked(Recipe.getByResult(block))))
-                    && !debug && block != StorageBlocks.core){
+            if((block.synthetic() && (Recipe.getByResult(block) == null || !control.unlocks.isUnlocked(Recipe.getByResult(block))))
+                    && block != StorageBlocks.core){
                 continue;
             }
 
-            if(Recipe.getByResult(block) != null && Recipe.getByResult(block).debugOnly && !debug){
-                continue;
-            }
-
-            if(Recipe.getByResult(block) != null && Recipe.getByResult(block).desktopOnly && mobile && !debug){
+            if(Recipe.getByResult(block) != null && !Recipe.getByResult(block).visibility.shown()){
                 continue;
             }
 

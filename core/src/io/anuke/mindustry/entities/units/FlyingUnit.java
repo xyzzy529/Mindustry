@@ -58,6 +58,12 @@ public abstract class FlyingUnit extends BaseUnit implements CarryTrait{
             if(target == null){
                 retarget(() -> {
                     targetClosest();
+
+                    if(target == null && isCommanded() && getCommand() == UnitCommand.patrol){
+                        setState(patrol);
+                        return;
+                    }
+
                     if(target == null) targetClosestEnemyFlag(BlockFlag.target);
                     if(target == null) targetClosestEnemyFlag(BlockFlag.producer);
                     if(target == null) targetClosestEnemyFlag(BlockFlag.turret);
@@ -70,13 +76,30 @@ public abstract class FlyingUnit extends BaseUnit implements CarryTrait{
                 attack(150f);
 
                 if((Mathf.angNear(angleTo(target), rotation, 15f) || !getWeapon().getAmmo().bullet.keepVelocity) //bombers don't care about rotation
-                && distanceTo(target) < getWeapon().getAmmo().getRange()){
+                && distanceTo(target) < Math.max(getWeapon().getAmmo().getRange(), type.range)){
                     AmmoType ammo = getWeapon().getAmmo();
 
                     Vector2 to = Predict.intercept(FlyingUnit.this, target, ammo.bullet.speed);
 
                     getWeapon().update(FlyingUnit.this, to.x, to.y);
                 }
+            }
+        }
+    },
+    patrol = new UnitState(){
+        public void update(){
+            retarget(() -> {
+                targetClosest();
+
+                if(target != null){
+                    setState(attack);
+                }
+
+                target = getClosestCore();
+            });
+
+            if(target != null){
+                circle(60f + Mathf.absin(Timers.time() + id * 23525, 70f, 1200f));
             }
         }
     },
@@ -90,7 +113,7 @@ public abstract class FlyingUnit extends BaseUnit implements CarryTrait{
                 state.set(attack);
             }else if(!targetHasFlag(BlockFlag.repair)){
                 retarget(() -> {
-                    Tile target = Geometry.findClosest(x, y, world.indexer().getAllied(team, BlockFlag.repair));
+                    Tile target = Geometry.findClosest(x, y, world.indexer.getAllied(team, BlockFlag.repair));
                     if(target != null) FlyingUnit.this.target = target.entity;
                 });
             }else{
@@ -99,16 +122,12 @@ public abstract class FlyingUnit extends BaseUnit implements CarryTrait{
         }
     };
 
-    //instantiation only
-    public FlyingUnit(){
-
-    }
-
     @Override
     public void onCommand(UnitCommand command){
         state.set(command == UnitCommand.retreat ? retreat :
-                 (command == UnitCommand.attack ? attack :
-                 (null)));
+                  command == UnitCommand.attack ? attack :
+                  command == UnitCommand.patrol ? patrol :
+                  null);
     }
 
     @Override
@@ -130,11 +149,13 @@ public abstract class FlyingUnit extends BaseUnit implements CarryTrait{
     public void update(){
         super.update();
 
-        updateRotation();
+        if(!Net.client()){
+            updateRotation();
+            wobble();
+        }
+
         trail.update(x + Angles.trnsx(rotation + 180f, 6f) + Mathf.range(wobblyness),
         y + Angles.trnsy(rotation + 180f, 6f) + Mathf.range(wobblyness));
-
-        wobble();
     }
 
     @Override
@@ -156,7 +177,7 @@ public abstract class FlyingUnit extends BaseUnit implements CarryTrait{
     @Override
     public void behavior(){
         if(health <= health * type.retreatPercent && !isCommanded() &&
-         Geometry.findClosest(x, y, world.indexer().getAllied(team, BlockFlag.repair)) != null){
+         Geometry.findClosest(x, y, world.indexer.getAllied(team, BlockFlag.repair)) != null){
             setState(retreat);
         }
 
@@ -179,11 +200,11 @@ public abstract class FlyingUnit extends BaseUnit implements CarryTrait{
     protected void wobble(){
         if(Net.client()) return;
 
-        x += Mathf.sin(Timers.time() + id * 999, 25f, 0.07f)*Timers.delta();
-        y += Mathf.cos(Timers.time() + id * 999, 25f, 0.07f)*Timers.delta();
+        x += Mathf.sin(Timers.time() + id * 999, 25f, 0.08f)*Timers.delta();
+        y += Mathf.cos(Timers.time() + id * 999, 25f, 0.08f)*Timers.delta();
 
         if(velocity.len() <= 0.05f){
-            rotation += Mathf.sin(Timers.time() + id * 99, 10f, 5f)*Timers.delta();
+            rotation += Mathf.sin(Timers.time() + id * 99, 10f, 2.5f)*Timers.delta();
         }
     }
 

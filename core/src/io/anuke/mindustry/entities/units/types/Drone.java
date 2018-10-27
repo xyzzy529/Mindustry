@@ -3,9 +3,9 @@ package io.anuke.mindustry.entities.units.types;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.utils.Queue;
 import io.anuke.mindustry.content.blocks.Blocks;
+import io.anuke.mindustry.content.fx.BlockFx;
 import io.anuke.mindustry.entities.TileEntity;
 import io.anuke.mindustry.entities.Units;
-import io.anuke.mindustry.entities.effect.ItemDrop;
 import io.anuke.mindustry.entities.traits.BuilderTrait;
 import io.anuke.mindustry.entities.traits.TargetTrait;
 import io.anuke.mindustry.entities.units.BaseUnit;
@@ -23,16 +23,13 @@ import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.world.blocks.BuildBlock;
 import io.anuke.mindustry.world.blocks.BuildBlock.BuildEntity;
 import io.anuke.mindustry.world.meta.BlockFlag;
+import io.anuke.ucore.core.Effects;
 import io.anuke.ucore.core.Events;
 import io.anuke.ucore.core.Timers;
 import io.anuke.ucore.entities.EntityGroup;
-import io.anuke.ucore.entities.EntityPhysics;
 import io.anuke.ucore.graphics.Draw;
 import io.anuke.ucore.graphics.Shapes;
-import io.anuke.ucore.util.Angles;
-import io.anuke.ucore.util.Geometry;
-import io.anuke.ucore.util.Mathf;
-import io.anuke.ucore.util.ThreadQueue;
+import io.anuke.ucore.util.*;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -42,7 +39,7 @@ import static io.anuke.mindustry.Vars.*;
 
 public class Drone extends FlyingUnit implements BuilderTrait{
     protected static float discoverRange = 120f;
-    protected static boolean initialized;
+    protected static int timerRepairEffect = timerIndex++;
 
     protected Item targetItem;
     protected Tile mineTile;
@@ -116,8 +113,11 @@ public class Drone extends FlyingUnit implements BuilderTrait{
                 circle(type.range);
             }else{
                 TileEntity entity = (TileEntity) target;
-                entity.health += type.healSpeed * Timers.delta();
-                entity.health = Mathf.clamp(entity.health, 0, entity.tile.block().health);
+                entity.healBy(type.healSpeed * entity.tile.block().health / 100f * Timers.delta());
+
+                if(timer.get(timerRepairEffect, 30)){
+                    Effects.effect(BlockFx.healBlockFull, Palette.heal, entity.x, entity.y, entity.tile.block().size);
+                }
             }
         }
     },
@@ -152,17 +152,13 @@ public class Drone extends FlyingUnit implements BuilderTrait{
                 }
 
                 retarget(() -> {
-                    if(findItemDrop()){
-                        return;
-                    }
-
                     if(getMineTile() == null){
                         findItem();
                     }
 
                     if(targetItem == null) return;
 
-                    target = world.indexer().findClosestOre(x, y, targetItem);
+                    target = world.indexer.findClosestOre(x, y, targetItem);
                 });
 
                 if(target instanceof Tile){
@@ -181,33 +177,6 @@ public class Drone extends FlyingUnit implements BuilderTrait{
 
         public void exited(){
             setMineTile(null);
-        }
-    },
-    pickup = new UnitState(){
-        public void entered(){
-            target = null;
-        }
-
-        public void update(){
-            ItemDrop item = (ItemDrop) target;
-
-            if(item == null || inventory.isFull() || item.getItem().type != ItemType.material || !inventory.canAcceptItem(item.getItem(), 1)){
-                setState(drop);
-                return;
-            }
-
-            if(distanceTo(item) < 4){
-                item.collision(Drone.this, x, y);
-            }
-
-            //item has been picked up
-            if(item.getAmount() == 0){
-                if(!findItemDrop()){
-                    setState(drop);
-                }
-            }
-
-            moveTo(0f);
         }
     },
     drop = new UnitState(){
@@ -255,7 +224,7 @@ public class Drone extends FlyingUnit implements BuilderTrait{
                 state.set(attack);
             }else if(!targetHasFlag(BlockFlag.repair)){
                 if(timer.get(timerTarget, 20)){
-                    Tile target = Geometry.findClosest(x, y, world.indexer().getAllied(team, BlockFlag.repair));
+                    Tile target = Geometry.findClosest(x, y, world.indexer.getAllied(team, BlockFlag.repair));
                     if(target != null) Drone.this.target = target.entity;
                 }
             }else{
@@ -264,17 +233,7 @@ public class Drone extends FlyingUnit implements BuilderTrait{
         }
     };
 
-    {
-        initEvents();
-    }
-
-    /**
-     * Initialize placement event notifier system.
-     * Static initialization is to be avoided, thus, this is done lazily.
-     */
-    private static void initEvents(){
-        if(initialized) return;
-
+    static{
         Events.on(BlockBuildEvent.class, event -> {
             EntityGroup<BaseUnit> group = unitGroups[event.team.ordinal()];
 
@@ -287,8 +246,6 @@ public class Drone extends FlyingUnit implements BuilderTrait{
                 }
             }
         });
-
-        initialized = true;
     }
 
     private void notifyPlaced(BuildEntity entity){
@@ -361,7 +318,7 @@ public class Drone extends FlyingUnit implements BuilderTrait{
     @Override
     public void behavior(){
         if(health <= health * type.retreatPercent &&
-                Geometry.findClosest(x, y, world.indexer().getAllied(team, BlockFlag.repair)) != null){
+                Geometry.findClosest(x, y, world.indexer.getAllied(team, BlockFlag.repair)) != null){
             setState(retreat);
         }
     }
@@ -400,24 +357,7 @@ public class Drone extends FlyingUnit implements BuilderTrait{
         if(entity == null){
             return;
         }
-        targetItem = Mathf.findMin(type.toMine, (a, b) -> -Integer.compare(entity.items.get(a), entity.items.get(b)));
-    }
-
-    protected boolean findItemDrop(){
-        TileEntity core = getClosestCore();
-
-        if(core == null) return false;
-
-        //find nearby dropped items to pick up if applicable
-        ItemDrop drop = EntityPhysics.getClosest(itemGroup, x, y, 60f,
-                item -> core.tile.block().acceptStack(item.getItem(), item.getAmount(), core.tile, Drone.this) == item.getAmount() &&
-                        inventory.canAcceptItem(item.getItem(), 1));
-        if(drop != null){
-            setState(pickup);
-            target = drop;
-            return true;
-        }
-        return false;
+        targetItem = Structs.findMin(type.toMine, (a, b) -> -Integer.compare(entity.items.get(a), entity.items.get(b)));
     }
 
     @Override

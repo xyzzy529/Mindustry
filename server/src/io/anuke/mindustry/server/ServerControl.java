@@ -8,6 +8,7 @@ import io.anuke.mindustry.core.GameState.State;
 import io.anuke.mindustry.entities.Player;
 import io.anuke.mindustry.game.Difficulty;
 import io.anuke.mindustry.game.EventType.GameOverEvent;
+import io.anuke.mindustry.game.EventType.SectorCompleteEvent;
 import io.anuke.mindustry.game.GameMode;
 import io.anuke.mindustry.game.Team;
 import io.anuke.mindustry.game.Version;
@@ -20,7 +21,6 @@ import io.anuke.mindustry.net.Packets.KickReason;
 import io.anuke.mindustry.net.TraceInfo;
 import io.anuke.mindustry.type.Item;
 import io.anuke.mindustry.type.ItemType;
-import io.anuke.mindustry.ui.fragments.DebugFragment;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.ucore.core.*;
 import io.anuke.ucore.modules.Module;
@@ -41,10 +41,8 @@ public class ServerControl extends Module{
     private static final int roundExtraTime = 12;
 
     private final CommandHandler handler = new CommandHandler("");
-    private ShuffleMode mode;
     private int gameOvers;
     private boolean inExtraRound;
-    private Team winnerTeam;
     private Task lastTask;
 
     public ServerControl(String[] args){
@@ -52,13 +50,12 @@ public class ServerControl extends Module{
             "shufflemode", "normal",
             "bans", "",
             "admins", "",
-            "sector_x", 0,
+            "sector_x", 2,
             "sector_y", 1,
+            "shuffle", true,
             "crashreport", false,
             "port", port
         );
-
-        mode = ShuffleMode.valueOf(Settings.getString("shufflemode"));
 
         Timers.setDeltaProvider(() -> Gdx.graphics.getDeltaTime() * 60f);
         Effects.setScreenShakeProvider((a, b) -> {});
@@ -94,15 +91,28 @@ public class ServerControl extends Module{
             "&lrWARNING: &lyIt is highly advised to specify which version you're using by building with gradle args &lc-Pbuildversion=&lm<build>&ly so that clients know which version you are using.");
         }
 
+        Events.on(SectorCompleteEvent.class, event -> {
+            Log.info("Sector complete.");
+            world.sectors.completeSector(world.getSector().x, world.getSector().y);
+            world.sectors.save();
+            gameOvers = 0;
+            inExtraRound = true;
+            Settings.putInt("sector_x", world.getSector().x + 1);
+            Settings.save();
+
+            Call.onInfoMessage("[accent]Sector conquered![]\n" + roundExtraTime + " seconds until deployment in next sector.");
+
+            playSectorMap();
+        });
+
         Events.on(GameOverEvent.class, event -> {
             if(inExtraRound) return;
             info("Game over!");
 
-            if(mode != ShuffleMode.off){
+            if(Settings.getBool("shuffle")){
                 if(world.getSector() == null){
-                    if(world.maps().all().size > 0){
-                        Array<Map> maps = mode == ShuffleMode.both ? world.maps().all() :
-                        mode == ShuffleMode.normal ? world.maps().defaultMaps() : world.maps().customMaps();
+                    if(world.maps.all().size > 0){
+                        Array<Map> maps = world.maps.customMaps().size == 0 ? world.maps.defaultMaps() : world.maps.customMaps();
 
                         Map previous = world.getMap();
                         Map map = previous;
@@ -110,8 +120,8 @@ public class ServerControl extends Module{
                             while(map == previous) map = maps.random();
                         }
 
-                        Call.onInfoMessage((state.mode.isPvp && winnerTeam != null
-                        ? "[YELLOW]The " + winnerTeam.name() + " team is victorious![]" : "[SCARLET]Game over![]")
+                        Call.onInfoMessage((state.mode.isPvp
+                        ? "[YELLOW]The " + event.winner.name() + " team is victorious![]" : "[SCARLET]Game over![]")
                         + "\nNext selected map:[accent] "+map.name+"[]"
                         + (map.meta.author() != null ? " by[accent] " + map.meta.author() + "[]" : "") + "."+
                         "\nNew game begins in " + roundExtraTime + " seconds.");
@@ -183,7 +193,7 @@ public class ServerControl extends Module{
             if(arg.length > 0){
 
                 String search = arg[0];
-                for(Map map : world.maps().all()){
+                for(Map map : world.maps.all()){
                     if(map.name.equalsIgnoreCase(search)) result = map;
                 }
 
@@ -238,7 +248,7 @@ public class ServerControl extends Module{
 
         handler.register("maps", "Display all available maps.", arg -> {
             info("Maps:");
-            for(Map map : world.maps().all()){
+            for(Map map : world.maps.all()){
                 info("  &ly{0}: &lb&fi{1} / {2}x{3}", map.name, map.custom ? "Custom" : "Default", map.meta.width, map.meta.height);
             }
         });
@@ -295,8 +305,7 @@ public class ServerControl extends Module{
 
         handler.register("difficulty", "<difficulty>", "Set game difficulty.", arg -> {
             try{
-                Difficulty diff = Difficulty.valueOf(arg[0]);
-                state.difficulty = diff;
+                state.difficulty = Difficulty.valueOf(arg[0]);
                 info("Difficulty set to '{0}'.", arg[0]);
             }catch(IllegalArgumentException e){
                 err("No difficulty with name '{0}' found.", arg[0]);
@@ -335,10 +344,10 @@ public class ServerControl extends Module{
             info("Crash reporting is now {0}.", value ? "on" : "off");
         });
 
-        handler.register("debug", "<on/off>", "Disables or enables debug mode", arg -> {
+        handler.register("strict", "<on/off>", "Disables or enables strict mode", arg -> {
            boolean value = arg[0].equalsIgnoreCase("on");
-           debug = value;
-           info("Debug mode is now {0}.", value ? "on" : "off");
+           netServer.admins.setStrict(value);
+           info("Strict mode is now {0}.", netServer.admins.getStrict() ? "on" : "off");
         });
 
         handler.register("allow-custom-clients", "[on/off]", "Allow or disallow custom clients.", arg -> {
@@ -359,16 +368,14 @@ public class ServerControl extends Module{
             }
         });
 
-        handler.register("shuffle", "<normal/custom/both/off>", "Set map shuffling.", arg -> {
-
-            try{
-                mode = ShuffleMode.valueOf(arg[0]);
-                Settings.putString("shufflemode", arg[0]);
-                Settings.save();
-                info("Shuffle mode set to '{0}'.", arg[0]);
-            }catch(Exception e){
-                err("Unknown shuffle mode '{0}'.", arg[0]);
+        handler.register("shuffle", "<on/off>", "Set map shuffling.", arg -> {
+            if(!arg[0].equals("on") && !arg[0].equals("off")){
+                err("Invalid shuffle mode.");
+                return;
             }
+            Settings.putBool("shuffle", arg[0].equals("on"));
+            Settings.save();
+            info("Shuffle mode set to '{0}'.", arg[0]);
         });
 
         handler.register("kick", "<username...>", "Kick a person by name.", arg -> {
@@ -642,11 +649,7 @@ public class ServerControl extends Module{
 
             info("&lyCore destroyed.");
             inExtraRound = false;
-            Events.fire(new GameOverEvent());
-        });
-
-        handler.register("debuginfo", "Print debug info", arg -> {
-            info(DebugFragment.debugInfo());
+            Events.fire(new GameOverEvent(Team.red));
         });
 
         handler.register("traceblock", "<x> <y>", "Prints debug info about a block", arg -> {
@@ -825,13 +828,13 @@ public class ServerControl extends Module{
 
     private void playSectorMap(boolean wait){
         int x = Settings.getInt("sector_x"), y = Settings.getInt("sector_y");
-        if(world.sectors().get(x, y) == null){
-            world.sectors().createSector(x, y);
+        if(world.sectors.get(x, y) == null){
+            world.sectors.createSector(x, y);
         }
 
-        world.sectors().get(x, y).completedMissions = 0;
+        world.sectors.get(x, y).completedMissions = 0;
 
-        play(wait, () -> world.loadSector(world.sectors().get(x, y)));
+        play(wait, () -> world.loadSector(world.sectors.get(x, y)));
     }
 
     private void play(boolean wait, Runnable run){
@@ -878,53 +881,10 @@ public class ServerControl extends Module{
         }
     }
 
-    private void checkPvPGameOver(){
-        Team alive = null;
-
-        for(Team team : Team.all){
-            if(state.teams.get(team).cores.size > 0){
-                if(alive != null){
-                    return;
-                }
-                alive = team;
-            }
-        }
-
-        if(alive != null && !state.gameOver){
-            state.gameOver = true;
-            winnerTeam = alive;
-            Events.fire(new GameOverEvent());
-        }
-    }
-
     @Override
     public void update(){
         if(!inExtraRound && state.mode.isPvp){
-            checkPvPGameOver();
+        //    checkPvPGameOver();
         }
-
-        if(state.is(State.playing) && world.getSector() != null && !inExtraRound && !debug){
-            //all assigned missions are complete
-            if(world.getSector().completedMissions >= world.getSector().missions.size){
-                Log.info("Mission complete.");
-                world.sectors().completeSector(world.getSector().x, world.getSector().y);
-                world.sectors().save();
-                gameOvers = 0;
-                inExtraRound = true;
-                Settings.putInt("sector_x", world.getSector().x + world.getSector().size);
-                Settings.save();
-
-                Call.onInfoMessage("[accent]Sector conquered![]\n" + roundExtraTime + " seconds until deployment in next sector.");
-
-                playSectorMap();
-            }else if(world.getSector().currentMission().isComplete()){
-                //increment completed missions, check next index next frame
-                world.getSector().completedMissions ++;
-            }
-        }
-    }
-
-    enum ShuffleMode{
-        normal, custom, both, off
     }
 }

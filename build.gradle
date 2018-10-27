@@ -10,8 +10,9 @@ buildscript {
     }
     dependencies {
         classpath 'com.mobidevelop.robovm:robovm-gradle-plugin:2.3.0'
+        classpath 'com.android.tools.build:gradle:3.2.1'
         classpath 'com.github.Anuken:teavm-gradle-plugin:7fe4290459'
-        classpath 'com.android.tools.build:gradle:3.1.3'
+
         classpath "com.badlogicgames.gdx:gdx-tools:1.9.8"
     }
 }
@@ -29,11 +30,11 @@ allprojects {
         appName = 'Mindustry'
         gdxVersion = '1.9.8'
         roboVMVersion = '2.3.0'
-        uCoreVersion = '92770a6b462953cb183e7d204f4fc8226b66b2a8'
+        uCoreVersion = '6080b6fb8c81f9c8e8dcb5809c2399061e15a63f'
 
         getVersionString = {
             String buildVersion = getBuildVersion()
-            return "$versionNumber-$versionType-$buildVersion"
+            return "$versionNumber-$versionModifier-$buildVersion"
         }
 
         getBuildVersion = {
@@ -49,10 +50,10 @@ allprojects {
             def output = 'en\n'
             def bundles = new File(project(':core').projectDir, 'assets/bundles/')
             bundles.listFiles().each { other ->
-                if(other.name == "bundle.properties") return;
+                if(other.name == "bundle.properties") return
                 output += other.name.substring("bundle".length() + 1, other.name.lastIndexOf('.')) + "\n"
             }
-            new File(project(':core').projectDir, 'assets/locales').text = output;
+            new File(project(':core').projectDir, 'assets/locales').text = output
         }
 
         writeVersion = {
@@ -61,7 +62,7 @@ allprojects {
 
             try{
                 pfile.createNewFile()
-            }catch (Exception e){}
+            }catch (Exception ignored){}
 
             if(pfile.exists()) {
 
@@ -95,6 +96,8 @@ project(":desktop") {
     dependencies {
         compile project(":core")
         compile project(":kryonet")
+        if(new File(projectDir.parent, '../debug').exists() && System.properties["release"] == null) compile project(":debug")
+
         compile "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
         compile "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
         compile "com.badlogicgames.gdx:gdx-controllers-lwjgl3:$gdxVersion"
@@ -105,14 +108,12 @@ project(":desktop") {
 project(":html") {
     apply plugin: "com.edibleday.teavm"
 
-
     dependencies {
         compile project(":core")
 
         compile project(":teavm-libgdx")
         //compile "com.github.Anuken:teavm-libgdx:a8399c3f17c2d08f8f24489368ae313af87a8be8"
     }
-
 }
 
 project(":ios") {
@@ -200,7 +201,24 @@ project(":server") {
     }
 }
 
-project(":packer") {
+project(":tests"){
+    apply plugin: "java"
+
+    dependencies {
+        testImplementation project(":core")
+        testImplementation('org.junit.jupiter:junit-jupiter-api:5.1.0')
+        testRuntimeOnly('org.junit.jupiter:junit-jupiter-engine:5.1.0')
+        testImplementation "com.badlogicgames.gdx:gdx-backend-headless:$gdxVersion"
+        testImplementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+    }
+
+    test {
+        useJUnitPlatform()
+        workingDir = new File("../core/assets")
+    }
+}
+
+project(":tools") {
     apply plugin: "java"
 
     dependencies {
@@ -225,12 +243,4 @@ project(":kryonet") {
         compile 'com.github.Anuken:kryonet:53b10247b1'
         compile 'com.github.Anuken:WaifUPnP:05eb46bc577fd7674596946ba288c96c0cedd893'
     }
-}
-
-project(":reporter"){
-    apply plugin: "java"
-}
-
-tasks.eclipse.doLast {
-    delete ".project"
 }

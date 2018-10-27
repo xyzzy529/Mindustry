@@ -11,7 +11,6 @@ import io.anuke.mindustry.entities.Player;
 import io.anuke.mindustry.entities.bullet.Bullet;
 import io.anuke.mindustry.entities.bullet.BulletType;
 import io.anuke.mindustry.entities.effect.Fire;
-import io.anuke.mindustry.entities.effect.ItemDrop;
 import io.anuke.mindustry.entities.effect.Lightning;
 import io.anuke.mindustry.entities.effect.Puddle;
 import io.anuke.mindustry.entities.traits.TypeTrait;
@@ -24,8 +23,10 @@ import io.anuke.mindustry.type.Liquid;
 import io.anuke.mindustry.type.Recipe;
 import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.ColorMapper;
+import io.anuke.mindustry.world.LegacyColorMapper;
 import io.anuke.ucore.function.Consumer;
 import io.anuke.ucore.util.Log;
+import io.anuke.ucore.util.ThreadArray;
 
 /**
  * Loads all game content.
@@ -96,6 +97,7 @@ public class ContentLoader{
 
         //not really a content class, but this makes initialization easier
         new ColorMapper(),
+        new LegacyColorMapper(),
 
         //recipes
         new Recipes(),
@@ -111,7 +113,7 @@ public class ContentLoader{
         registerTypes();
 
         for(ContentType type : ContentType.values()){
-            contentMap[type.ordinal()] = new Array<>();
+            contentMap[type.ordinal()] = new ThreadArray<>();
             contentNameMap[type.ordinal()] =  new ObjectMap<>();
         }
 
@@ -136,8 +138,7 @@ public class ContentLoader{
         }
 
         //set up ID mapping
-        for(int k = 0; k < contentMap.length; k ++){
-            Array<Content> arr = contentMap[k];
+        for(Array<Content> arr : contentMap){
             for(int i = 0; i < arr.size; i++){
                 int id = arr.get(i).id;
                 if(id < 0) id += 256;
@@ -175,7 +176,7 @@ public class ContentLoader{
     }
 
     public void dispose(){
-        //TODO clear all content.
+        //clear all content, currently not needed
     }
 
     public void handleContent(Content content){
@@ -202,6 +203,9 @@ public class ContentLoader{
         if(id < 0) id += 256;
 
         if(temporaryMapper != null && temporaryMapper[type.ordinal()] != null && temporaryMapper[type.ordinal()].length != 0){
+            if(temporaryMapper[type.ordinal()][id] == null){
+                return getByID(type, 0); //default value is always ID 0
+            }
             return (T)temporaryMapper[type.ordinal()][id];
         }
 
@@ -263,7 +267,6 @@ public class ContentLoader{
      */
     private void registerTypes(){
         TypeTrait.registerType(Player.class, Player::new);
-        TypeTrait.registerType(ItemDrop.class, ItemDrop::new);
         TypeTrait.registerType(Fire.class, Fire::new);
         TypeTrait.registerType(Puddle.class, Puddle::new);
         TypeTrait.registerType(Bullet.class, Bullet::new);

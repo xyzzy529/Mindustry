@@ -166,16 +166,13 @@ public class PowerSmelter extends PowerBlock{
             }
         }
 
-        if(useFlux && item.fluxiness >= minFlux){
-            return tile.entity.items.get(item) < itemCapacity;
-        }
+        return useFlux && item.fluxiness >= minFlux && tile.entity.items.get(item) < itemCapacity;
 
-        return false;
     }
 
     @Override
     public int getMaximumAccepted(Tile tile, Item item){
-        return itemCapacity - tile.entity.items.get(item);
+        return itemCapacity;
     }
 
     @Override
@@ -203,7 +200,7 @@ public class PowerSmelter extends PowerBlock{
     }
 
     @Override
-    public TileEntity getEntity(){
+    public TileEntity newEntity(){
         return new PowerSmelterEntity();
     }
 

@@ -106,7 +106,7 @@ public class PausedDialog extends FloatingDialog{
             content().row();
 
             content().addRowImageTextButton("$text.load", "icon-load", isize, load::show).disabled(b -> Net.active());
-            content().addRowImageTextButton("$text.host", "icon-host", isize, ui.host::show).disabled(b -> Net.active());
+            content().addRowImageTextButton("$text.hostserver.mobile", "icon-host", isize, ui.host::show).disabled(b -> Net.active());
             content().addRowImageTextButton("$text.quit", "icon-quit", isize, () -> {
                 ui.showConfirm("$text.confirm", "$text.quit.confirm", () -> {
                     if(Net.client()) netClient.disconnectQuietly();
@@ -118,15 +118,15 @@ public class PausedDialog extends FloatingDialog{
     }
 
     public void runExitSave(){
-        if(control.getSaves().getCurrent() == null ||
-                !control.getSaves().getCurrent().isAutosave()){
+        if(control.saves.getCurrent() == null ||
+                !control.saves.getCurrent().isAutosave()){
             state.set(State.menu);
             return;
         }
 
         ui.loadLogic("$text.saveload", () -> {
             try{
-                control.getSaves().getCurrent().save();
+                control.saves.getCurrent().save();
             }catch(Throwable e){
                 e.printStackTrace();
                 threads.runGraphics(() -> ui.showError("[orange]" + Bundles.get("text.savefail")));

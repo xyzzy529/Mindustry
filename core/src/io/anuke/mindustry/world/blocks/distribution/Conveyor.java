@@ -20,9 +20,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import static io.anuke.mindustry.Vars.itemSize;
-import static io.anuke.mindustry.Vars.tilesize;
-
 import static io.anuke.mindustry.Vars.*;
 
 public class Conveyor extends Block{
@@ -185,23 +182,15 @@ public class Conveyor extends Block{
         float centerDstScl = 3f;
         float tx = Geometry.d4[tile.getRotation()].x, ty = Geometry.d4[tile.getRotation()].y;
 
-        float min;
         float centerx = 0f, centery = 0f;
 
         if(Math.abs(tx) > Math.abs(ty)){
-            float rx = tile.worldx() - tx / 2f * tilesize;
-            min = Mathf.clamp((unit.x - rx) * tx / tilesize);
             centery = Mathf.clamp((tile.worldy() - unit.y) / centerDstScl, -centerSpeed, centerSpeed);
             if(Math.abs(tile.worldy() - unit.y) < 1f) centery = 0f;
         }else{
-            float ry = tile.worldy() - ty / 2f * tilesize;
-            min = Mathf.clamp((unit.y - ry) * ty / tilesize);
             centerx = Mathf.clamp((tile.worldx() - unit.x) / centerDstScl, -centerSpeed, centerSpeed);
             if(Math.abs(tile.worldx() - unit.x) < 1f) centerx = 0f;
         }
-
-        entity.minCarry = Math.min(entity.minCarry, min);
-        entity.carrying += unit.getMass();
 
         if(entity.convey.size * itemSpace < 0.9f){
             unit.getVelocity().add((tx * speed + centerx) * entity.delta(), (ty * speed + centery) * entity.delta());
@@ -209,13 +198,12 @@ public class Conveyor extends Block{
     }
 
     @Override
-    public synchronized void update(Tile tile){
+    public void update(Tile tile){
 
         ConveyorEntity entity = tile.entity();
         entity.minitem = 1f;
 
         int minremove = Integer.MAX_VALUE;
-        float speed = Math.max(this.speed - (1f - (carryCapacity - entity.carrying) / carryCapacity), 0f);
 
         for(int i = entity.convey.size - 1; i >= 0; i--){
             long value = entity.convey.get(i);
@@ -228,14 +216,14 @@ public class Conveyor extends Block{
             }
 
             float nextpos = (i == entity.convey.size - 1 ? 100f : pos2.set(entity.convey.get(i + 1), ItemPos.updateShorts).y) - itemSpace;
-            if(entity.minCarry >= pos.y && entity.minCarry <= nextpos){
-                nextpos = entity.minCarry;
-            }
             float maxmove = Math.min(nextpos - pos.y, speed * entity.delta());
 
             if(maxmove > minmove){
                 pos.y += maxmove;
-                pos.x = Mathf.lerpDelta(pos.x, 0, 0.06f);
+                if(Mathf.in(pos.x, 0, 0.1f)){
+                    pos.x = 0f;
+                }
+                pos.x = Mathf.lerpDelta(pos.x, 0, 0.1f);
             }else{
                 pos.x = Mathf.lerpDelta(pos.x, pos.seed / offsetScl, 0.1f);
             }
@@ -243,6 +231,17 @@ public class Conveyor extends Block{
             pos.y = Mathf.clamp(pos.y);
 
             if(pos.y >= 0.9999f && offloadDir(tile, pos.item)){
+                Tile next = tile.getNearby(tile.getRotation());
+                if(next.block() instanceof Conveyor){
+                    ConveyorEntity othere = next.entity();
+
+                    ItemPos ni = pos2.set(othere.convey.get(othere.lastInserted), ItemPos.updateShorts);
+
+                    if(next.getRotation() == tile.getRotation()){
+                        ni.x = pos.x;
+                    }
+                    othere.convey.set(othere.lastInserted, ni.pack());
+                }
                 minremove = Math.min(i, minremove);
                 tile.entity.items.remove(pos.item, 1);
             }else{
@@ -260,9 +259,6 @@ public class Conveyor extends Block{
             entity.clogHeat = Mathf.lerpDelta(entity.clogHeat, 0f, 1f);
         }
 
-        entity.carrying = 0f;
-        entity.minCarry = 2f;
-
         if(entity.items.total() == 0){
             entity.sleep();
         }else{
@@ -278,7 +274,7 @@ public class Conveyor extends Block{
     }
 
     @Override
-    public synchronized int removeStack(Tile tile, Item item, int amount){
+    public int removeStack(Tile tile, Item item, int amount){
         ConveyorEntity entity = tile.entity();
         entity.noSleep();
         int removed = 0;
@@ -304,13 +300,13 @@ public class Conveyor extends Block{
     }
 
     @Override
-    public synchronized int acceptStack(Item item, int amount, Tile tile, Unit source){
+    public int acceptStack(Item item, int amount, Tile tile, Unit source){
         ConveyorEntity entity = tile.entity();
         return Math.min((int)(entity.minitem / itemSpace), amount);
     }
 
     @Override
-    public synchronized void handleStack(Item item, int amount, Tile tile, Unit source){
+    public void handleStack(Item item, int amount, Tile tile, Unit source){
         ConveyorEntity entity = tile.entity();
 
         for(int i = amount - 1; i >= 0; i--){
@@ -343,22 +339,20 @@ public class Conveyor extends Block{
         ConveyorEntity entity = tile.entity();
         entity.noSleep();
         long result = ItemPos.packItem(item, y * 0.9f, pos, (byte) Mathf.random(255));
-        boolean inserted = false;
 
         tile.entity.items.add(item, 1);
 
         for(int i = 0; i < entity.convey.size; i++){
             if(compareItems(result, entity.convey.get(i)) < 0){
                 entity.convey.insert(i, result);
-                inserted = true;
-                break;
+                entity.lastInserted = (byte)i;
+                return;
             }
         }
 
         //this item must be greater than anything there...
-        if(!inserted){
-            entity.convey.add(result);
-        }
+        entity.convey.add(result);
+        entity.lastInserted = (byte)(entity.convey.size-1);
     }
 
     @Override
@@ -366,9 +360,6 @@ public class Conveyor extends Block{
         ConveyorEntity entity = tile.entity();
         Array<Object> arr = super.getDebugInfo(tile);
         arr.addAll(Array.with(
-                "mincarry", entity.minCarry,
-                "minitem", entity.minCarry,
-                "carrying", entity.carrying,
                 "clogHeat", entity.clogHeat,
                 "sleeping", entity.isSleeping()
         ));
@@ -376,16 +367,15 @@ public class Conveyor extends Block{
     }
 
     @Override
-    public TileEntity getEntity(){
+    public TileEntity newEntity(){
         return new ConveyorEntity();
     }
 
     public static class ConveyorEntity extends TileEntity{
 
         LongArray convey = new LongArray();
+        byte lastInserted;
         float minitem = 1;
-        float carrying;
-        float minCarry = 2f;
 
         int blendshadowrot = -1;
         int blendbits;

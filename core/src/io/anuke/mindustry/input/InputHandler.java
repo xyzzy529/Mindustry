@@ -1,13 +1,14 @@
 package io.anuke.mindustry.input;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputAdapter;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector2;
 import io.anuke.annotations.Annotations.Loc;
 import io.anuke.annotations.Annotations.Remote;
 import io.anuke.mindustry.content.blocks.Blocks;
+import io.anuke.mindustry.content.fx.EnvironmentFx;
 import io.anuke.mindustry.entities.Player;
-import io.anuke.mindustry.entities.Units;
-import io.anuke.mindustry.entities.effect.ItemDrop;
 import io.anuke.mindustry.entities.effect.ItemTransfer;
 import io.anuke.mindustry.entities.traits.BuilderTrait.BuildRequest;
 import io.anuke.mindustry.gen.Call;
@@ -19,7 +20,7 @@ import io.anuke.mindustry.ui.fragments.OverlayFragment;
 import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.Build;
 import io.anuke.mindustry.world.Tile;
-import io.anuke.ucore.core.Core;
+import io.anuke.ucore.core.Effects;
 import io.anuke.ucore.core.Graphics;
 import io.anuke.ucore.core.Inputs;
 import io.anuke.ucore.core.Timers;
@@ -50,7 +51,6 @@ public abstract class InputHandler extends InputAdapter{
     public InputHandler(Player player){
         this.player = player;
         this.section = "player_" + (player.playerIndex + 1);
-        Timers.run(1f, () -> frag.build(Core.scene.getRoot()));
     }
 
     //methods to override
@@ -61,7 +61,7 @@ public abstract class InputHandler extends InputAdapter{
             throw new ValidateException(player, "Player cannot drop an item.");
         }
 
-        ItemDrop.create(player.inventory.getItem().item, player.inventory.getItem().amount, player.x, player.y, angle);
+        Effects.effect(EnvironmentFx.dropItem, Color.WHITE, player.x, player.y, angle, player.inventory.getItem().item);
         player.inventory.clearItem();
     }
 
@@ -124,16 +124,20 @@ public abstract class InputHandler extends InputAdapter{
         tile.block().tapped(tile, player);
     }
 
+    public OverlayFragment getFrag(){
+        return frag;
+    }
+
     public void update(){
 
     }
 
     public float getMouseX(){
-        return control.gdxInput().getX();
+        return Gdx.input.getX();
     }
 
     public float getMouseY(){
-        return control.gdxInput().getY();
+        return Gdx.input.getY();
     }
 
     public void resetCursor(){
@@ -185,6 +189,10 @@ public abstract class InputHandler extends InputAdapter{
                 consumed = true;
                 frag.config.hideConfig();
             }
+
+            if(frag.config.isShown()){
+                consumed = true;
+            }
         }
 
         //call tapped event
@@ -215,6 +223,12 @@ public abstract class InputHandler extends InputAdapter{
 
         if(!showedConsume){
             frag.consume.hide();
+        }
+
+        if(!consumed && player.isBuilding()){
+            player.clearBuilding();
+            recipe = null;
+            return true;
         }
 
         return consumed;
@@ -252,19 +266,32 @@ public abstract class InputHandler extends InputAdapter{
                 && tile.floor().drops != null && tile.floor().drops.item.hardness <= player.mech.drillPower
                 && !tile.floor().playerUnmineable
                 && player.inventory.canAcceptItem(tile.floor().drops.item)
-                && Units.getClosestEnemy(player.getTeam(), tile.worldx(), tile.worldy(), 40f, e -> true) == null //don't being mining when an enemy is near
                 && tile.block() == Blocks.air && player.distanceTo(tile.worldx(), tile.worldy()) <= Player.mineDistance;
     }
 
-    /**
-     * Returns the tile at the specified MOUSE coordinates.
-     */
+    /**Returns the tile at the specified MOUSE coordinates.*/
     Tile tileAt(float x, float y){
-        Vector2 vec = Graphics.world(x, y);
-        if(isPlacing()){
+        return world.tile(tileX(x), tileY(y));
+    }
+
+    int tileX(float cursorX){
+        Vector2 vec = Graphics.world(cursorX, 0);
+        if(selectedBlock()){
             vec.sub(recipe.result.offset(), recipe.result.offset());
         }
-        return world.tileWorld(vec.x, vec.y);
+        return world.toTile(vec.x);
+    }
+
+    int tileY(float cursorY){
+        Vector2 vec = Graphics.world(0, cursorY);
+        if(selectedBlock()){
+            vec.sub(recipe.result.offset(), recipe.result.offset());
+        }
+        return world.toTile(vec.y);
+    }
+
+    public boolean selectedBlock(){
+        return isPlacing();
     }
 
     public boolean isPlacing(){
@@ -329,7 +356,7 @@ public abstract class InputHandler extends InputAdapter{
         for(Tile tile : state.teams.get(player.getTeam()).cores){
             if(tile.distanceTo(x * tilesize, y * tilesize) < coreBuildRange){
                 return Build.validPlace(player.getTeam(), x, y, type, rotation) &&
-                        Vector2.dst(player.x, player.y, x * tilesize, y * tilesize) < Player.placeDistance;
+                Vector2.dst(player.x, player.y, x * tilesize, y * tilesize) < Player.placeDistance;
             }
         }
 
@@ -341,12 +368,10 @@ public abstract class InputHandler extends InputAdapter{
     }
 
     public void placeBlock(int x, int y, Recipe recipe, int rotation){
-        //todo multiplayer support
         player.addBuildRequest(new BuildRequest(x, y, rotation, recipe));
     }
 
     public void breakBlock(int x, int y){
-        //todo multiplayer support
         Tile tile = world.tile(x, y).target();
         player.addBuildRequest(new BuildRequest(tile.x, tile.y));
     }

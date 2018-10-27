@@ -2,6 +2,8 @@ package io.anuke.mindustry.type;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.utils.Array;
+import io.anuke.mindustry.Vars;
 import io.anuke.mindustry.game.UnlockableContent;
 import io.anuke.mindustry.graphics.Palette;
 import io.anuke.mindustry.ui.ContentDisplay;
@@ -36,6 +38,10 @@ public class Item extends UnlockableContent implements Comparable<Item>{
      * 1 cost = 1 tick added to build time
      */
     public float cost = 3f;
+    /**Whether this item has ores generated for it.*/
+    public boolean genOre = false;
+    /**If true, item is always unlocked.*/
+    public boolean alwaysUnlocked = false;
 
     public Item(String name, Color color){
         this.name = name;
@@ -43,13 +49,18 @@ public class Item extends UnlockableContent implements Comparable<Item>{
         this.description = Bundles.getOrNull("item." + this.name + ".description");
 
         if(!Bundles.has("item." + this.name + ".name")){
-            Log.err("Warning: item '" + name + "' is missing a localized name. Add the follow to bundle.properties:");
+            Log.err("Warning: item '" + name + "' is missing a localized name. Add the following to bundle.properties:");
             Log.err("item." + this.name + ".name=" + Strings.capitalize(name.replace('-', '_')));
         }
     }
 
     public void load(){
         this.region = Draw.region("item-" + name);
+    }
+
+    @Override
+    public boolean alwaysUnlocked() {
+        return alwaysUnlocked;
     }
 
     @Override
@@ -85,5 +96,13 @@ public class Item extends UnlockableContent implements Comparable<Item>{
     @Override
     public ContentType getContentType(){
         return ContentType.item;
+    }
+
+    public static Array<Item> getAllOres(){
+        Array<Item> arr = new Array<>();
+        for(Item item : Vars.content.items()){
+            if(item.genOre) arr.add(item);
+        }
+        return arr;
     }
 }

@@ -22,7 +22,7 @@ public class PowerBlocks extends BlockList implements ContentList{
         thermalGenerator = new LiquidHeatGenerator("thermal-generator"){{
             maxLiquidGenerate = 0.5f;
             powerCapacity = 40f;
-            powerPerLiquid = 1.5f;
+            powerPerLiquid = 1f;
             generateEffect = BlockFx.redgeneratespark;
             size = 2;
         }};
@@ -63,26 +63,25 @@ public class PowerBlocks extends BlockList implements ContentList{
             health = 600;
         }};
 
-        battery = new PowerDistributor("battery"){{
+        battery = new Battery("battery"){{
             powerCapacity = 320f;
         }};
 
-        batteryLarge = new PowerDistributor("battery-large"){{
+        batteryLarge = new Battery("battery-large"){{
             size = 3;
             powerCapacity = 2000f;
         }};
 
         powerNode = new PowerNode("power-node"){{
             shadow = "shadow-round-1";
-            powerSpeed = 0.5f;
             maxNodes = 4;
+            laserRange = 6;
         }};
 
         powerNodeLarge = new PowerNode("power-node-large"){{
             size = 2;
-            powerSpeed = 1.5f;
             maxNodes = 6;
-            laserRange = 7.5f;
+            laserRange = 9.5f;
             shadow = "shadow-round-2";
         }};
 

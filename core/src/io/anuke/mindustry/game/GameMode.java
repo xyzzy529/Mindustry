@@ -15,21 +15,22 @@ public enum GameMode{
         disableWaves = true;
         hidden = true;
         enemyCheat = true;
-        showPads = true;
+    }},
+    victory{{
+        disableWaves = true;
+        hidden = true;
+        enemyCheat = false;
+        showMission = false;
     }},
     pvp{{
-        showPads = true;
         disableWaves = true;
         isPvp = true;
-        hidden = true;
         enemyCoreBuildRadius = 600f;
-        enemyCoreShieldRadius = 0f;
         respawnTime = 60 * 10;
     }};
 
-    public boolean infiniteResources, disableWaveTimer, disableWaves, hidden, enemyCheat, isPvp, showPads;
+    public boolean infiniteResources, disableWaveTimer, disableWaves, showMission = true, hidden, enemyCheat, isPvp;
     public float enemyCoreBuildRadius = 400f;
-    public float enemyCoreShieldRadius = 140f;
     public float respawnTime = 60 * 4;
 
     public String description(){

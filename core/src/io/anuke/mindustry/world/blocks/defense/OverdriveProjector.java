@@ -16,6 +16,10 @@ import io.anuke.ucore.graphics.Hue;
 import io.anuke.ucore.graphics.Lines;
 import io.anuke.ucore.util.Mathf;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+
 import static io.anuke.mindustry.Vars.tilesize;
 import static io.anuke.mindustry.Vars.world;
 
@@ -30,8 +34,8 @@ public class OverdriveProjector extends Block{
     protected float reload = 260f;
     protected float range = 80f;
     protected float speedBoost = 1.5f;
-    protected float speedBoostPhase = 0.5f;
-    protected float useTime = 300f;
+    protected float speedBoostPhase = 0.75f;
+    protected float useTime = 400f;
 
     public OverdriveProjector(String name){
         super(name);
@@ -119,7 +123,7 @@ public class OverdriveProjector extends Block{
     }
 
     @Override
-    public TileEntity getEntity(){
+    public TileEntity newEntity(){
         return new OverdriveEntity();
     }
 
@@ -127,5 +131,17 @@ public class OverdriveProjector extends Block{
         float heat;
         float charge;
         float phaseHeat;
+
+        @Override
+        public void write(DataOutputStream stream) throws IOException{
+            stream.writeFloat(heat);
+            stream.writeFloat(phaseHeat);
+        }
+
+        @Override
+        public void read(DataInputStream stream) throws IOException{
+            heat = stream.readFloat();
+            phaseHeat = stream.readFloat();
+        }
     }
 }
