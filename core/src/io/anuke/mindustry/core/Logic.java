@@ -213,8 +213,6 @@ public class Logic extends Module{
 
                 EntityQuery.collideGroups(bulletGroup, playerGroup);
                 EntityQuery.collideGroups(playerGroup, playerGroup);
-
-                world.pathfinder.update();
             }
         }
 

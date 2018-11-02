@@ -4,6 +4,7 @@ import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.utils.IntArray;
 import com.badlogic.gdx.utils.Queue;
 import com.badlogic.gdx.utils.TimeUtils;
+import io.anuke.mindustry.game.AuxThread;
 import io.anuke.mindustry.game.EventType.TileChangeEvent;
 import io.anuke.mindustry.game.EventType.WorldLoadEvent;
 import io.anuke.mindustry.game.Team;
@@ -14,21 +15,21 @@ import io.anuke.mindustry.world.meta.BlockFlag;
 import io.anuke.ucore.core.Events;
 import io.anuke.ucore.core.Timers;
 import io.anuke.ucore.util.Geometry;
+import io.anuke.ucore.util.Log;
 import io.anuke.ucore.util.Structs;
+import io.anuke.ucore.util.Threads;
 
 import static io.anuke.mindustry.Vars.state;
 import static io.anuke.mindustry.Vars.world;
 
-public class Pathfinder{
-    private long maxUpdate = TimeUtils.millisToNanos(4);
+public class Pathfinder extends AuxThread{
     private PathData[] paths;
     private IntArray blocked = new IntArray();
 
     public Pathfinder(){
-        Events.on(WorldLoadEvent.class, event -> clear());
-        Events.on(TileChangeEvent.class, event -> {
+        Events.on(WorldLoadEvent.class, event -> post(this::clear));
+        Events.on(TileChangeEvent.class, event -> post(() -> {
             if(Net.client()) return;
-
             for(Team team : Team.all){
                 TeamData data = state.teams.get(team);
                 if(state.teams.isActive(team) && data.team != event.tile.getTeam()){
@@ -37,21 +38,26 @@ public class Pathfinder{
             }
 
             update(event.tile, event.tile.getTeam());
-        });
+        }));
     }
 
     public void activateTeamPath(Team team){
         createFor(team);
     }
 
-    public void update(){
+    @Override
+    protected void update(){
         if(Net.client()) return;
+
+        Timers.mark();
 
         for(Team team : Team.all){
             if(state.teams.isActive(team)){
-                updateFrontier(team, maxUpdate);
+                updateFrontier(team);
             }
         }
+
+        Log.info("Updating tiles. Elapsed time: {0}", Timers.elapsed());
     }
 
     public Tile getTargetTile(Team team, Tile tile){
@@ -83,7 +89,9 @@ public class Pathfinder{
     }
 
     public float getValueforTeam(Team team, int x, int y){
-        return paths == null || team.ordinal() >= paths.length ? 0 : Structs.inBounds(x, y, paths[team.ordinal()].weights) ? paths[team.ordinal()].weights[x][y] : 0;
+        synchronized(this){
+            return paths == null || team.ordinal() >= paths.length ? 0 : Structs.inBounds(x, y, paths[team.ordinal()].weights) ? paths[team.ordinal()].weights[x][y] : 0;
+        }
     }
 
     private boolean passable(Tile tile, Team team){
@@ -93,6 +101,8 @@ public class Pathfinder{
     /**Clears the frontier, increments the search and sets up all flow sources.
      * This only occurs for active teams.*/
     private void update(Tile tile, Team team){
+        Threads.assertOn(thread);
+
         //make sure team exists
         if(paths[team.ordinal()] != null){
             PathData path = paths[team.ordinal()];
@@ -117,6 +127,8 @@ public class Pathfinder{
     }
 
     private void createFor(Team team){
+        Threads.assertOn(thread);
+
         PathData path = new PathData();
         path.search++;
         path.frontier.ensureCapacity((world.width() + world.height()) * 3);
@@ -138,15 +150,15 @@ public class Pathfinder{
             }
         }
 
-        updateFrontier(team, -1);
+        updateFrontier(team);
     }
 
-    private void updateFrontier(Team team, long nsToRun){
+    private void updateFrontier(Team team){
+        Threads.assertOn(thread);
+
         PathData path = paths[team.ordinal()];
 
-        long start = TimeUtils.nanoTime();
-
-        while(path.frontier.size > 0 && (nsToRun < 0 || TimeUtils.timeSinceNanos(start) <= nsToRun)){
+        while(path.frontier.size > 0){
             Tile tile = path.frontier.removeLast();
             float cost = path.weights[tile.x][tile.y];
 
@@ -168,21 +180,26 @@ public class Pathfinder{
     }
 
     private void clear(){
-        Timers.mark();
+        Threads.assertOn(thread);
 
-        paths = new PathData[Team.all.length];
-        blocked.clear();
+        synchronized(this){
 
-        for(Team team : Team.all){
-            PathData path = new PathData();
-            paths[team.ordinal()] = path;
+            paths = new PathData[Team.all.length];
+            blocked.clear();
 
-            if(state.teams.isActive(team)){
-                createFor(team);
+            for(Team team : Team.all){
+                PathData path = new PathData();
+                paths[team.ordinal()] = path;
+
+                if(state.teams.isActive(team)){
+                    createFor(team);
+                }
             }
         }
 
         state.spawner.checkAllQuadrants();
+
+        update();
     }
 
     class PathData{
