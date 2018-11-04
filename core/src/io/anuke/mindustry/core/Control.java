@@ -27,10 +27,7 @@ import io.anuke.ucore.core.*;
 import io.anuke.ucore.entities.Entities;
 import io.anuke.ucore.entities.EntityQuery;
 import io.anuke.ucore.modules.Module;
-import io.anuke.ucore.util.Atlas;
-import io.anuke.ucore.util.Bundles;
-import io.anuke.ucore.util.Strings;
-import io.anuke.ucore.util.Timer;
+import io.anuke.ucore.util.*;
 
 import java.io.IOException;
 
@@ -61,7 +58,7 @@ public class Control extends Module{
         saves = new Saves();
         unlocks = new Unlocks();
 
-        Inputs.useControllers(!gwt);
+        Inputs.useControllers(true);
 
         Gdx.input.setCatchBackKey(true);
 
@@ -128,7 +125,7 @@ public class Control extends Module{
 
         Events.on(WorldLoadGraphicsEvent.class, event -> {
             if(mobile){
-                Core.camera.position.set(players[0].x, players[0].y, 0);
+                Gdx.app.postRunnable(() -> Core.camera.position.set(players[0].x, players[0].y, 0));
             }
         });
 
@@ -389,22 +386,17 @@ public class Control extends Module{
                 state.set(state.is(State.playing) ? State.paused : State.playing);
             }
 
-            if(Inputs.keyTap("menu")){
-                if(state.is(State.paused)){
-                    ui.paused.hide();
-                    state.set(State.playing);
-                }else if(!ui.restart.isShown()){
-                    if(ui.chatfrag.chatOpen()){
-                        ui.chatfrag.hide();
-                    }else{
-                        ui.paused.show();
-                        state.set(State.paused);
-                    }
+            if(Inputs.keyTap("menu") && !ui.restart.isShown()){
+                if(ui.chatfrag.chatOpen()){
+                    ui.chatfrag.hide();
+                }else if(!ui.paused.isShown() && !ui.hasDialog()){
+                    ui.paused.show();
+                    state.set(State.paused);
                 }
             }
 
         }else{
-            if(!state.is(State.paused) || Net.active()){
+            if(!state.isPaused()){
                 Timers.update();
             }
         }

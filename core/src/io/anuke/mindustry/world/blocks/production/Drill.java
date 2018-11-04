@@ -16,12 +16,16 @@ import io.anuke.mindustry.world.consumers.ConsumeLiquid;
 import io.anuke.mindustry.world.meta.BlockGroup;
 import io.anuke.mindustry.world.meta.BlockStat;
 import io.anuke.mindustry.world.meta.StatUnit;
+import io.anuke.mindustry.world.meta.StatValue;
 import io.anuke.ucore.core.Effects;
 import io.anuke.ucore.core.Effects.Effect;
 import io.anuke.ucore.core.Graphics;
 import io.anuke.ucore.core.Timers;
 import io.anuke.ucore.graphics.Draw;
+import io.anuke.ucore.scene.ui.Image;
+import io.anuke.ucore.scene.ui.layout.Cell;
 import io.anuke.ucore.util.Mathf;
+import io.anuke.ucore.util.Threads;
 
 import static io.anuke.mindustry.Vars.content;
 public class Drill extends Block{
@@ -132,7 +136,8 @@ public class Drill extends Block{
 
             for(int i = 0; i < list.size; i++){
                 Item item = list.get(i);
-                table.addImage(item.name + "1").size(8 * 3).padRight(2).padLeft(2).padTop(3).padBottom(3);
+                Cell<Image> imageCell = table.addImage(item.name + "1").size(8 * 3).padRight(2).padLeft(2).padTop(3).padBottom(3);
+                StatValue.addToolTip(imageCell.getElement(), item);
                 if(i != list.size - 1){
                     table.add("/");
                 }
@@ -216,7 +221,7 @@ public class Drill extends Block{
     @Override
     public boolean canPlaceOn(Tile tile){
         if(isMultiblock()){
-            for(Tile other : tile.getLinkedTilesAs(this, drawTiles)){
+            for(Tile other : tile.getLinkedTilesAs(this, Threads.isLogic() ? tempTiles : drawTiles)){
                 if(isValid(other)){
                     return true;
                 }

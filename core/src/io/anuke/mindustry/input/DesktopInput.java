@@ -151,14 +151,6 @@ public class DesktopInput extends InputHandler{
 
         pollInput();
 
-        //removed for now, will add back if necessary
-        /*
-        if(recipe != null && !Settings.getBool("desktop-place-help-2", false)){
-            ui.showInfo("$text.construction.desktop");
-            Settings.putBool("desktop-place-help-2", true);
-            Settings.save();
-        }*/
-
         //deselect if not placing
         if(!isPlacing() && mode == placing){
             mode = none;
@@ -230,7 +222,7 @@ public class DesktopInput extends InputHandler{
                 player.isShooting = true;
             }
         }else if(Inputs.keyTap(section, "deselect") && (recipe != null || mode != none || player.isBuilding()) &&
-        !(player.getCurrentRequest() != null && player.getCurrentRequest().remove && KeyBinds.get(section, "deselect") == KeyBinds.get(section, "break"))){
+        !(player.getCurrentRequest() != null && player.getCurrentRequest().breaking && KeyBinds.get(section, "deselect") == KeyBinds.get(section, "break"))){
             if(recipe == null){
                 player.clearBuilding();
             }
@@ -238,9 +230,10 @@ public class DesktopInput extends InputHandler{
             recipe = null;
             mode = none;
         }else if(Inputs.keyTap(section, "break") && !ui.hasMouse()){
-            selectX = cursorX;
-            selectY = cursorY;
+            //is recalculated because setting the mode to breaking removes potential multiblock cursor offset
             mode = breaking;
+            selectX = tileX(Gdx.input.getX());
+            selectY = tileY(Gdx.input.getY());
         }
 
 
@@ -276,6 +269,11 @@ public class DesktopInput extends InputHandler{
             mode = none;
         }
         
+    }
+
+    @Override
+    public boolean selectedBlock(){
+        return isPlacing() && mode != breaking;
     }
 
     @Override

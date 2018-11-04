@@ -29,10 +29,6 @@ public class NetworkIO{
     public static void writeWorld(Player player, OutputStream os){
 
         try(DataOutputStream stream = new DataOutputStream(os)){
-
-            stream.writeFloat(Timers.time()); //timer time
-            stream.writeLong(TimeUtils.millis()); //timestamp
-
             //--GENERAL STATE--
             stream.writeByte(state.mode.ordinal()); //gamemode
             stream.writeUTF(world.getMap().name); //map name
@@ -77,6 +73,7 @@ public class NetworkIO{
                     if(tile.entity.liquids != null) tile.entity.liquids.write(stream);
                     if(tile.entity.cons != null) tile.entity.cons.write(stream);
 
+                    tile.entity.writeConfig(stream);
                     tile.entity.write(stream);
                 }else if(tile.block() == Blocks.air){
                     int consecutives = 0;
@@ -156,11 +153,7 @@ public class NetworkIO{
         Player player = players[0];
 
         try(DataInputStream stream = new DataInputStream(is)){
-            float timerTime = stream.readFloat();
-            long timestamp = stream.readLong();
-
             Timers.clear();
-            Timers.resetTime(timerTime + (TimeUtils.timeSinceMillis(timestamp) / 1000f) * 60f);
 
             //general state
             byte mode = stream.readByte();
@@ -237,6 +230,7 @@ public class NetworkIO{
                     if(tile.entity.liquids != null) tile.entity.liquids.read(stream);
                     if(tile.entity.cons != null) tile.entity.cons.read(stream);
 
+                    tile.entity.readConfig(stream);
                     tile.entity.read(stream);
                 }else if(wallid == 0){
                     int consecutives = stream.readUnsignedByte();

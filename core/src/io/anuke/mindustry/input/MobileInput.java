@@ -86,14 +86,16 @@ public class MobileInput extends InputHandler implements GestureListener{
         Unit unit = Units.getClosestEnemy(player.getTeam(), x, y, 20f, u -> !u.isDead());
 
         if(unit != null){
-            threads.run(() -> player.target = unit);
+            player.setMineTile(null);
+            player.target = unit;
         }else{
             Tile tile = world.tileWorld(x, y);
             if(tile != null) tile = tile.target();
 
-            if(tile != null && state.teams.areEnemies(player.getTeam(), tile.getTeam())){
+            if(tile != null && tile.synthetic() && state.teams.areEnemies(player.getTeam(), tile.getTeam())){
                 TileEntity entity = tile.entity;
-                threads.run(() -> player.target = entity);
+                player.setMineTile(null);
+                player.target = entity;
             }
         }
     }
@@ -572,13 +574,14 @@ public class MobileInput extends InputHandler implements GestureListener{
                     consumed = true;
                     player.dropCarry(); //drop off unit
                 }else{
-                    Unit unit = Units.getClosest(player.getTeam(), Graphics.world(x, y).x, Graphics.world(x, y).y, 4f, u -> !u.isFlying() && u.getMass() <= player.mech.carryWeight);
+                    threads.run(() -> {
+                        Unit unit = Units.getClosest(player.getTeam(), Graphics.world(x, y).x, Graphics.world(x, y).y, 4f, u -> !u.isFlying() && u.getMass() <= player.mech.carryWeight);
 
-                    if(unit != null){
-                        player.moveTarget = unit;
-                        consumed = true;
-                        Effects.effect(Fx.select, unit.getX(), unit.getY());
-                    }
+                        if(unit != null){
+                            player.moveTarget = unit;
+                            Effects.effect(Fx.select, unit.getX(), unit.getY());
+                        }
+                    });
                 }
             }
 

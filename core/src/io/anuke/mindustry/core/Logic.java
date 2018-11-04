@@ -159,16 +159,13 @@ public class Logic extends Module{
 
         if(!state.is(State.menu)){
 
-            if(!state.is(State.paused) || Net.active()){
-                Timers.update();
-            }
-
             if(!Net.client() && !world.isInvalidMap()){
                 updateSectors();
                 checkGameOver();
             }
 
-            if(!state.is(State.paused) || Net.active()){
+            if(!state.isPaused()){
+                Timers.update();
 
                 if(!state.mode.disableWaveTimer && !state.mode.disableWaves){
                     state.wavetime -= Timers.delta();

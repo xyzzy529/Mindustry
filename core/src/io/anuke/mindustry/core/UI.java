@@ -3,6 +3,7 @@ package io.anuke.mindustry.core;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.graphics.Colors;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.utils.Align;
 import io.anuke.mindustry.Vars;
@@ -25,7 +26,6 @@ import io.anuke.ucore.scene.ui.TextField.TextFieldFilter;
 import io.anuke.ucore.scene.ui.TooltipManager;
 import io.anuke.ucore.scene.ui.layout.Table;
 import io.anuke.ucore.scene.ui.layout.Unit;
-import io.anuke.ucore.util.Structs;
 
 import static io.anuke.mindustry.Vars.*;
 import static io.anuke.ucore.scene.actions.Actions.*;
@@ -87,33 +87,17 @@ public class UI extends SceneModule{
         Dialog.closePadR = -1;
         Dialog.closePadT = 5;
 
-        Colors.put("description", Palette.description);
-        Colors.put("turretinfo", Palette.turretinfo);
-        Colors.put("iteminfo", Palette.iteminfo);
-        Colors.put("powerinfo", Palette.powerinfo);
-        Colors.put("liquidinfo", Palette.liquidinfo);
-        Colors.put("craftinfo", Palette.craftinfo);
-        Colors.put("missingitems", Palette.missingitems);
-        Colors.put("health", Palette.health);
-        Colors.put("healthstats", Palette.healthstats);
-        Colors.put("interact", Palette.interact);
         Colors.put("accent", Palette.accent);
-        Colors.put("place", Palette.place);
-        Colors.put("remove", Palette.remove);
-        Colors.put("placeRotate", Palette.placeRotate);
-        Colors.put("range", Palette.range);
-        Colors.put("power", Palette.power);
     }
 
     @Override
     protected void loadSkin(){
         skin = new Skin(Gdx.files.internal("ui/uiskin.json"), Core.atlas);
-        Structs.each(font -> {
+
+        for(BitmapFont font : skin.getAll(BitmapFont.class).values()){
             font.setUseIntegerPositions(false);
             font.getData().setScale(Vars.fontScale);
-            font.getData().down += Unit.dp.scl(3f);
-            font.getData().lineHeight -= Unit.dp.scl(3f);
-        }, skin.font(), skin.getFont("default-font-chat"), skin.getFont("trad-chinese"), skin.getFont("simp-chinese"));
+        }
     }
 
     @Override

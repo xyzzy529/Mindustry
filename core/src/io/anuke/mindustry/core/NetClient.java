@@ -21,7 +21,6 @@ import io.anuke.mindustry.net.Net;
 import io.anuke.mindustry.net.Net.SendMode;
 import io.anuke.mindustry.net.NetworkIO;
 import io.anuke.mindustry.net.Packets.*;
-import io.anuke.mindustry.net.TraceInfo;
 import io.anuke.mindustry.net.ValidateException;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.world.modules.ItemModule;
@@ -205,12 +204,6 @@ public class NetClient extends Module{
     public static void onPositionSet(float x, float y){
         players[0].x = x;
         players[0].y = y;
-    }
-
-    @Remote(variants = Variant.one)
-    public static void onTraceInfo(TraceInfo info){
-        Player player = playerGroup.getByID(info.playerid);
-        ui.traces.show(player, info);
     }
 
     @Remote
@@ -415,9 +408,14 @@ public class NetClient extends Module{
 
         if(timer.get(0, playerSyncTime)){
             Player player = players[0];
-            BuildRequest[] requests = new BuildRequest[player.getPlaceQueue().size];
-            for(int i = 0; i < requests.length; i++){
-                requests[i] = player.getPlaceQueue().get(i);
+
+            BuildRequest[] requests;
+
+            synchronized(player.getPlaceQueue()){
+                requests = new BuildRequest[player.getPlaceQueue().size];
+                for(int i = 0; i < requests.length; i++){
+                    requests[i] = player.getPlaceQueue().get(i);
+                }
             }
 
             Call.onClientShapshot(lastSent++, TimeUtils.millis(), player.x, player.y,
