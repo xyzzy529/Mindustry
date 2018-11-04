@@ -115,8 +115,7 @@ public class Renderer extends RendererModule{
     }
 
     @Override
-    public void init(){
-    }
+    public void init(){}
 
     @Override
     public void update(){
