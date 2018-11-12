@@ -70,7 +70,7 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
     public TargetTrait moveTarget;
 
     private float walktime;
-    private Queue<BuildRequest> placeQueue = new ThreadQueue<>();
+    private Queue<BuildRequest> placeQueue = new Queue<>();
     private Tile mining;
     private CarriableTrait carrying;
     private Trail trail = new Trail(12);
@@ -323,7 +323,7 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
         }
 
         if(floor.isLiquid){
-            Draw.tint(Color.WHITE, floor.liquidColor, Mathf.clamp(drownTime));
+            Draw.tint(Color.WHITE, floor.liquidColor, drownTime);
         }else{
             Draw.tint(Color.WHITE);
         }
@@ -395,76 +395,79 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
     public void drawName(){
         GlyphLayout layout = Pooling.obtain(GlyphLayout.class, GlyphLayout::new);
 
-        Draw.tscl(0.25f / 2);
+        boolean ints = Core.font.usesIntegerPositions();
+        Core.font.setUseIntegerPositions(false);
+        Draw.tscl(0.25f / io.anuke.ucore.scene.ui.layout.Unit.dp.scl(1f));
         layout.setText(Core.font, name);
         Draw.color(0f, 0f, 0f, 0.3f);
-        Draw.rect("blank", x, y + 8 - layout.height / 2, layout.width + 2, layout.height + 2);
+        Draw.rect("blank", x, y + 8 - layout.height / 2, layout.width + 2, layout.height + 3);
         Draw.color();
         Draw.tcolor(color);
         Draw.text(name, x, y + 8);
 
         if(isAdmin){
-            Draw.color(color);
             float s = 3f;
+            Draw.color(color.r * 0.5f, color.g * 0.5f, color.b * 0.5f, 1f);
+            Draw.rect("icon-admin-small", x + layout.width / 2f + 2 + 1, y + 6.5f, s, s);
+            Draw.color(color);
             Draw.rect("icon-admin-small", x + layout.width / 2f + 2 + 1, y + 7f, s, s);
         }
 
         Draw.reset();
         Pooling.free(layout);
-        Draw.tscl(fontScale);
+        Draw.tscl(1f);
+        Core.font.setUseIntegerPositions(ints);
     }
 
     /**Draw all current build requests. Does not draw the beam effect, only the positions.*/
     public void drawBuildRequests(){
-        synchronized(getPlaceQueue()){
-            for(BuildRequest request : getPlaceQueue()){
-                if(getCurrentRequest() == request) continue;
+        for(BuildRequest request : getPlaceQueue()){
+            if(getCurrentRequest() == request) continue;
 
-                if(request.remove){
-                    Block block = world.tile(request.x, request.y).target().block();
+            if(request.breaking){
+                Block block = world.tile(request.x, request.y).target().block();
 
-                    //draw removal request
-                    Lines.stroke(2f);
+                //draw removal request
+                Lines.stroke(2f);
 
-                    Draw.color(Palette.removeBack);
+                Draw.color(Palette.removeBack);
 
-                    float rad = Mathf.absin(Timers.time(), 7f, 1f) + block.size * tilesize / 2f - 1;
+                float rad = Mathf.absin(Timers.time(), 7f, 1f) + block.size * tilesize / 2f - 1;
 
-                    Lines.square(
-                            request.x * tilesize + block.offset(),
-                            request.y * tilesize + block.offset() - 1,
-                            rad);
+                Lines.square(
+                        request.x * tilesize + block.offset(),
+                        request.y * tilesize + block.offset() - 1,
+                        rad);
 
-                    Draw.color(Palette.remove);
+                Draw.color(Palette.remove);
 
-                    Lines.square(
-                            request.x * tilesize + block.offset(),
-                            request.y * tilesize + block.offset(),
-                            rad);
-                }else{
-                    //draw place request
-                    Lines.stroke(2f);
+                Lines.square(
+                        request.x * tilesize + block.offset(),
+                        request.y * tilesize + block.offset(),
+                        rad);
+            }else{
+                //draw place request
+                Lines.stroke(2f);
 
-                    Draw.color(Palette.accentBack);
+                Draw.color(Palette.accentBack);
 
-                    float rad = Mathf.absin(Timers.time(), 7f, 1f) - 2f + request.recipe.result.size * tilesize / 2f;
+                float rad = Mathf.absin(Timers.time(), 7f, 1f) - 2f + request.recipe.result.size * tilesize / 2f;
 
-                    Lines.square(
-                            request.x * tilesize + request.recipe.result.offset(),
-                            request.y * tilesize + request.recipe.result.offset() - 1,
-                            rad);
+                Lines.square(
+                        request.x * tilesize + request.recipe.result.offset(),
+                        request.y * tilesize + request.recipe.result.offset() - 1,
+                        rad);
 
-                    Draw.color(Palette.accent);
+                Draw.color(Palette.accent);
 
-                    Lines.square(
-                            request.x * tilesize + request.recipe.result.offset(),
-                            request.y * tilesize + request.recipe.result.offset(),
-                            rad);
-                }
+                Lines.square(
+                        request.x * tilesize + request.recipe.result.offset(),
+                        request.y * tilesize + request.recipe.result.offset(),
+                        rad);
             }
-
-            Draw.reset();
         }
+
+        Draw.reset();
     }
 
     //endregion
@@ -495,6 +498,8 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
             spawner = -1;
         }
 
+        avoidOthers(1f);
+
         Tile tile = world.tileWorld(x, y);
 
         boostHeat = Mathf.lerpDelta(boostHeat, (tile != null && tile.solid()) || (isBoosting && ((!movement.isZero() && moved) || !isLocal)) ? 1f : 0f, 0.08f);
@@ -505,14 +510,14 @@ public class Player extends Unit implements BuilderTrait, CarryTrait, ShooterTra
             achievedFlight = true;
         }
 
-        if(boostHeat <= liftoffBoost + 0.05f && achievedFlight){
+        if(boostHeat <= liftoffBoost + 0.05f && achievedFlight && !mech.flying){
             if(tile != null){
                 if(mech.shake > 1f){
                     Effects.shake(mech.shake, mech.shake, this);
                 }
                 Effects.effect(UnitFx.unitLand, tile.floor().minimapColor, x, y, tile.floor().isLiquid ? 1f : 0.5f);
             }
-            if(!mech.flying) mech.onLand(this);
+            mech.onLand(this);
             achievedFlight = false;
         }
 

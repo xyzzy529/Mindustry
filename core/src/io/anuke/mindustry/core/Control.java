@@ -57,7 +57,7 @@ public class Control extends Module{
         saves = new Saves();
         unlocks = new Unlocks();
 
-        Inputs.useControllers(!gwt);
+        Inputs.useControllers(true);
 
         Gdx.input.setCatchBackKey(true);
 
@@ -124,7 +124,7 @@ public class Control extends Module{
 
         Events.on(WorldLoadGraphicsEvent.class, event -> {
             if(mobile){
-                Core.camera.position.set(players[0].x, players[0].y, 0);
+                Gdx.app.postRunnable(() -> Core.camera.position.set(players[0].x, players[0].y, 0));
             }
         });
 
@@ -178,12 +178,6 @@ public class Control extends Module{
         });
 
         Events.on(WorldLoadEvent.class, event -> threads.runGraphics(() -> Events.fire(new WorldLoadGraphicsEvent())));
-
-        Events.on(TileChangeEvent.class, event -> {
-            if(event.tile.getTeam() == players[0].getTeam() && Recipe.getByResult(event.tile.block()) != null){
-                unlocks.handleContentUsed(Recipe.getByResult(event.tile.block()));
-            }
-        });
     }
 
     public void addPlayer(int index){
@@ -277,7 +271,7 @@ public class Control extends Module{
         outer:
         for(int i = 0; i < content.recipes().size; i ++){
             Recipe recipe = content.recipes().get(i);
-            if(!recipe.hidden && recipe.requirements != null){
+            if(!recipe.isHidden() && recipe.requirements != null){
                 for(ItemStack stack : recipe.requirements){
                     if(!entity.items.has(stack.item, Math.min((int) (stack.amount * unlockResourceScaling), 2000))) continue outer;
                 }
@@ -321,7 +315,7 @@ public class Control extends Module{
         if(!Settings.getBool("4.0-warning-2", false)){
 
             Timers.run(5f, () -> {
-                FloatingDialog dialog = new FloatingDialog("[orange]WARNING![]");
+                FloatingDialog dialog = new FloatingDialog("[accent]WARNING![]");
                 dialog.buttons().addButton("$text.ok", () -> {
                     dialog.hide();
                     Settings.putBool("4.0-warning-2", true);
@@ -379,17 +373,12 @@ public class Control extends Module{
                 state.set(state.is(State.playing) ? State.paused : State.playing);
             }
 
-            if(Inputs.keyTap("menu")){
-                if(state.is(State.paused)){
-                    ui.paused.hide();
-                    state.set(State.playing);
-                }else if(!ui.restart.isShown()){
-                    if(ui.chatfrag.chatOpen()){
-                        ui.chatfrag.hide();
-                    }else{
-                        ui.paused.show();
-                        state.set(State.paused);
-                    }
+            if(Inputs.keyTap("menu") && !ui.restart.isShown()){
+                if(ui.chatfrag.chatOpen()){
+                    ui.chatfrag.hide();
+                }else if(!ui.paused.isShown() && !ui.hasDialog()){
+                    ui.paused.show();
+                    state.set(State.paused);
                 }
             }
 

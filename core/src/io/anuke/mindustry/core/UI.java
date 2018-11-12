@@ -2,10 +2,13 @@ package io.anuke.mindustry.core;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Colors;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.utils.Align;
-import io.anuke.mindustry.Vars;
 import io.anuke.mindustry.editor.MapEditorDialog;
 import io.anuke.mindustry.game.EventType.ResizeEvent;
 import io.anuke.mindustry.graphics.Palette;
@@ -25,12 +28,14 @@ import io.anuke.ucore.scene.ui.TextField.TextFieldFilter;
 import io.anuke.ucore.scene.ui.TooltipManager;
 import io.anuke.ucore.scene.ui.layout.Table;
 import io.anuke.ucore.scene.ui.layout.Unit;
-import io.anuke.ucore.util.Structs;
+import io.anuke.ucore.util.Threads;
 
 import static io.anuke.mindustry.Vars.*;
 import static io.anuke.ucore.scene.actions.Actions.*;
 
 public class UI extends SceneModule{
+    private FreeTypeFontGenerator generator;
+
     public final MenuFragment menufrag = new MenuFragment();
     public final HudFragment hudfrag = new HudFragment();
     public final ChatFragment chatfrag = new ChatFragment();
@@ -87,33 +92,33 @@ public class UI extends SceneModule{
         Dialog.closePadR = -1;
         Dialog.closePadT = 5;
 
-        Colors.put("description", Palette.description);
-        Colors.put("turretinfo", Palette.turretinfo);
-        Colors.put("iteminfo", Palette.iteminfo);
-        Colors.put("powerinfo", Palette.powerinfo);
-        Colors.put("liquidinfo", Palette.liquidinfo);
-        Colors.put("craftinfo", Palette.craftinfo);
-        Colors.put("missingitems", Palette.missingitems);
-        Colors.put("health", Palette.health);
-        Colors.put("healthstats", Palette.healthstats);
-        Colors.put("interact", Palette.interact);
         Colors.put("accent", Palette.accent);
-        Colors.put("place", Palette.place);
-        Colors.put("remove", Palette.remove);
-        Colors.put("placeRotate", Palette.placeRotate);
-        Colors.put("range", Palette.range);
-        Colors.put("power", Palette.power);
+    }
+    
+    void generateFonts(){
+        generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/pixel.ttf"));
+        FreeTypeFontParameter param = new FreeTypeFontParameter();
+        param.size = (int)(14*2 * Math.max(Unit.dp.scl(1f), 0.5f));
+        param.shadowColor = Color.DARK_GRAY;
+        param.shadowOffsetY = 2;
+        param.incremental = true;
+
+        skin.add("default-font", generator.generateFont(param));
+        skin.add("default-font-chat", generator.generateFont(param));
+        skin.getFont("default-font").getData().markupEnabled = true;
+        skin.getFont("default-font").setOwnsTexture(false);
     }
 
     @Override
     protected void loadSkin(){
-        skin = new Skin(Gdx.files.internal("ui/uiskin.json"), Core.atlas);
-        Structs.each(font -> {
-            font.setUseIntegerPositions(false);
-            font.getData().setScale(Vars.fontScale);
-            font.getData().down += Unit.dp.scl(3f);
-            font.getData().lineHeight -= Unit.dp.scl(3f);
-        }, skin.font(), skin.getFont("default-font-chat"), skin.getFont("trad-chinese"), skin.getFont("simp-chinese"));
+        skin = new Skin(Core.atlas);
+        generateFonts();
+        skin.load(Gdx.files.internal("ui/uiskin.json"));
+
+        for(BitmapFont font : skin.getAll(BitmapFont.class).values()){
+            font.setUseIntegerPositions(true);
+            //font.getData().setScale(Vars.fontScale);
+        }
     }
 
     @Override
@@ -150,6 +155,7 @@ public class UI extends SceneModule{
         load = new LoadDialog();
         levels = new CustomGameDialog();
         language = new LanguageDialog();
+        unlocks = new UnlocksDialog();
         settings = new SettingsMenuDialog();
         host = new HostDialog();
         paused = new PausedDialog();
@@ -160,7 +166,6 @@ public class UI extends SceneModule{
         traces = new TraceDialog();
         maps = new MapsDialog();
         localplayers = new LocalPlayerDialog();
-        unlocks = new UnlocksDialog();
         content = new ContentInfoDialog();
         sectors = new SectorsDialog();
         missions = new MissionDialog();
@@ -181,6 +186,12 @@ public class UI extends SceneModule{
         super.resize(width, height);
 
         Events.fire(new ResizeEvent());
+    }
+
+    @Override
+    public void dispose(){
+        super.dispose();
+        generator.dispose();
     }
 
     public void loadGraphics(Runnable call){
@@ -229,6 +240,8 @@ public class UI extends SceneModule{
     }
 
     public void showInfoFade(String info){
+        Threads.assertGraphics();
+
         Table table = new Table();
         table.setFillParent(true);
         table.actions(Actions.fadeOut(7f, Interpolation.fade), Actions.removeActor());
@@ -237,6 +250,8 @@ public class UI extends SceneModule{
     }
 
     public void showInfo(String info){
+        Threads.assertGraphics();
+
         new Dialog("$text.info.title", "dialog"){{
             getCell(content()).growX();
             content().margin(15).add(info).width(400f).wrap().get().setAlignment(Align.center, Align.center);
@@ -245,6 +260,8 @@ public class UI extends SceneModule{
     }
 
     public void showInfo(String info, Runnable clicked){
+        Threads.assertGraphics();
+
         new Dialog("$text.info.title", "dialog"){{
             getCell(content()).growX();
             content().margin(15).add(info).width(400f).wrap().get().setAlignment(Align.center, Align.center);

@@ -21,7 +21,6 @@ import io.anuke.mindustry.net.Net;
 import io.anuke.mindustry.net.Net.SendMode;
 import io.anuke.mindustry.net.NetworkIO;
 import io.anuke.mindustry.net.Packets.*;
-import io.anuke.mindustry.net.TraceInfo;
 import io.anuke.mindustry.net.ValidateException;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.world.modules.ItemModule;
@@ -166,14 +165,17 @@ public class NetClient extends Module{
     public static void onKick(KickReason reason){
         netClient.disconnectQuietly();
         state.set(State.menu);
-        if(!reason.quiet){
-            if(reason.extraText() != null){
-                ui.showText(reason.toString(), reason.extraText());
-            }else{
-                ui.showText("$text.disconnect", reason.toString());
+
+        threads.runGraphics(() -> {
+            if(!reason.quiet){
+                if(reason.extraText() != null){
+                    ui.showText(reason.toString(), reason.extraText());
+                }else{
+                    ui.showText("$text.disconnect", reason.toString());
+                }
             }
-        }
-        ui.loadfrag.hide();
+            ui.loadfrag.hide();
+        });
     }
 
     @Remote(variants = Variant.both)
@@ -205,12 +207,6 @@ public class NetClient extends Module{
     public static void onPositionSet(float x, float y){
         players[0].x = x;
         players[0].y = y;
-    }
-
-    @Remote(variants = Variant.one)
-    public static void onTraceInfo(TraceInfo info){
-        Player player = playerGroup.getByID(info.playerid);
-        ui.traces.show(player, info);
     }
 
     @Remote
@@ -403,11 +399,11 @@ public class NetClient extends Module{
         quiet = true;
     }
 
-    public synchronized void addRemovedEntity(int id){
+    public void addRemovedEntity(int id){
         removed.add(id);
     }
 
-    public synchronized boolean isEntityUsed(int id){
+    public boolean isEntityUsed(int id){
         return removed.contains(id);
     }
 
@@ -418,11 +414,9 @@ public class NetClient extends Module{
 
             BuildRequest[] requests;
 
-            synchronized(player.getPlaceQueue()){
-                requests = new BuildRequest[player.getPlaceQueue().size];
-                for(int i = 0; i < requests.length; i++){
-                    requests[i] = player.getPlaceQueue().get(i);
-                }
+            requests = new BuildRequest[player.getPlaceQueue().size];
+            for(int i = 0; i < requests.length; i++){
+                requests[i] = player.getPlaceQueue().get(i);
             }
 
             Call.onClientShapshot(lastSent++, TimeUtils.millis(), player.x, player.y,

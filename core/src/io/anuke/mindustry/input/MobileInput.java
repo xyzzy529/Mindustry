@@ -92,7 +92,7 @@ public class MobileInput extends InputHandler implements GestureListener{
             Tile tile = world.tileWorld(x, y);
             if(tile != null) tile = tile.target();
 
-            if(tile != null && state.teams.areEnemies(player.getTeam(), tile.getTeam())){
+            if(tile != null && tile.synthetic() && state.teams.areEnemies(player.getTeam(), tile.getTeam())){
                 TileEntity entity = tile.entity;
                 player.setMineTile(null);
                 player.target = entity;
@@ -430,7 +430,7 @@ public class MobileInput extends InputHandler implements GestureListener{
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button){
-        if(state.is(State.menu)) return false;
+        if(state.is(State.menu) || player.isDead()) return false;
 
         //get tile on cursor
         Tile cursor = tileAt(screenX, screenY);
@@ -519,7 +519,7 @@ public class MobileInput extends InputHandler implements GestureListener{
 
     @Override
     public boolean longPress(float x, float y){
-        if(state.is(State.menu) || mode == none) return false;
+        if(state.is(State.menu) || mode == none || player.isDead()) return false;
 
         //get tile on cursor
         Tile cursor = tileAt(x, y);
@@ -535,7 +535,7 @@ public class MobileInput extends InputHandler implements GestureListener{
 
         if(mode == breaking){
             Effects.effect(Fx.tapBlock, cursor.worldx(), cursor.worldy(), 1f);
-        }else{
+        }else if(recipe != null){
             Effects.effect(Fx.tapBlock, cursor.worldx() + recipe.result.offset(), cursor.worldy() + recipe.result.offset(), recipe.result.size);
         }
 
@@ -574,13 +574,14 @@ public class MobileInput extends InputHandler implements GestureListener{
                     consumed = true;
                     player.dropCarry(); //drop off unit
                 }else{
-                    Unit unit = Units.getClosest(player.getTeam(), Graphics.world(x, y).x, Graphics.world(x, y).y, 4f, u -> !u.isFlying() && u.getMass() <= player.mech.carryWeight);
+                    threads.run(() -> {
+                        Unit unit = Units.getClosest(player.getTeam(), Graphics.world(x, y).x, Graphics.world(x, y).y, 4f, u -> !u.isFlying() && u.getMass() <= player.mech.carryWeight);
 
-                    if(unit != null){
-                        player.moveTarget = unit;
-                        consumed = true;
-                        Effects.effect(Fx.select, unit.getX(), unit.getY());
-                    }
+                        if(unit != null){
+                            player.moveTarget = unit;
+                            Effects.effect(Fx.select, unit.getX(), unit.getY());
+                        }
+                    });
                 }
             }
 
@@ -594,7 +595,7 @@ public class MobileInput extends InputHandler implements GestureListener{
 
     @Override
     public void update(){
-        if(state.is(State.menu)){
+        if(state.is(State.menu) || player.isDead()){
             selection.clear();
             removals.clear();
             mode = none;

@@ -17,7 +17,7 @@ import static io.anuke.mindustry.Vars.*;
 
 public abstract class Mission{
     private String extraMessage;
-    private boolean showComplete =true;
+    private boolean showComplete = true;
 
     public abstract boolean isComplete();
 
@@ -27,6 +27,10 @@ public abstract class Mission{
     /**Returns the info string displayed in the sector dialog (menu)*/
     public String menuDisplayString(){
         return displayString();
+    }
+
+    public String getIcon(){
+        return "icon-mission-defense";
     }
 
     public GameMode getMode(){
@@ -79,7 +83,7 @@ public abstract class Mission{
 
     public void onComplete(){
         if(showComplete && !headless){
-            threads.runGraphics(() -> ui.hudfrag.showText("[LIGHT_GRAY]"+menuDisplayString() + ":\n" + Bundles.get("text.mission.complete")));
+            threads.runGraphics(() -> ui.hudfrag.showToast("[LIGHT_GRAY]"+menuDisplayString() + ":\n" + Bundles.get("text.mission.complete")));
         }
     }
 
@@ -95,13 +99,5 @@ public abstract class Mission{
         return Array.with();
     }
 
-    public void generate(Generation gen){
-        generateCoreAt(gen, 50, 50, defaultTeam);
-    }
-
-    public void generateCoreAt(Generation gen, int coreX, int coreY, Team team){
-        gen.tiles[coreX][coreY].setBlock(StorageBlocks.core);
-        gen.tiles[coreX][coreY].setTeam(team);
-        state.teams.get(team).cores.add(gen.tiles[coreX][coreY]);
-    }
+    public void generate(Generation gen){}
 }

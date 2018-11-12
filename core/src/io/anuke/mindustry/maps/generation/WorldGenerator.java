@@ -309,6 +309,9 @@ public class WorldGenerator{
         double elevation = elevationOf(x, y, detailed);
         double temp =
             + sim3.octaveNoise2D(detailed ? 12 : 9, 0.6, 1f / 1100f, x - 120, y);
+        double lake = sim2.octaveNoise2D(1, 1, 1f / 110f, x, y);
+
+        elevation -= Math.pow(lake + 0.15, 5);
 
         int lerpDst = 20;
         lerpDst *= lerpDst;

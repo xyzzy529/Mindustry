@@ -62,7 +62,6 @@ public class UnitTypes implements ContentList{
             drag = 0.4f;
             hitsize = 8f;
             mass = 1.75f;
-            range = 40f;
             weapon = Weapons.chainBlaster;
             health = 130;
         }};
@@ -72,7 +71,6 @@ public class UnitTypes implements ContentList{
             speed = 0.18f;
             drag = 0.4f;
             mass = 3.5f;
-            range = 10f;
             hitsize = 9f;
             rotatespeed = 0.1f;
             weapon = Weapons.flamethrower;
@@ -85,7 +83,6 @@ public class UnitTypes implements ContentList{
             drag = 0.4f;
             mass = 5f;
             hitsize = 10f;
-            range = 10f;
             rotatespeed = 0.06f;
             weaponOffsetX = 1;
             targetAir = false;
@@ -121,6 +118,7 @@ public class UnitTypes implements ContentList{
             speed = 0.14f;
             maxVelocity = 1.3f;
             drag = 0.01f;
+            range = 80f;
             isFlying = true;
             weapon = Weapons.laserBurster;
         }};

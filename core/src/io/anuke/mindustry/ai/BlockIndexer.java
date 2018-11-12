@@ -2,7 +2,6 @@ package io.anuke.mindustry.ai;
 
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.*;
-import io.anuke.mindustry.content.Items;
 import io.anuke.mindustry.content.blocks.Blocks;
 import io.anuke.mindustry.entities.TileEntity;
 import io.anuke.mindustry.game.EventType.TileChangeEvent;
@@ -35,12 +34,14 @@ public class BlockIndexer{
     private final static int structQuadrantSize = 12;
 
     /**Set of all ores that are being scanned.*/
-    private final ObjectSet<Item> scanOres = ObjectSet.with(Items.copper, Items.coal, Items.lead, Items.thorium, Items.titanium);
+    private final ObjectSet<Item> scanOres = new ObjectSet<Item>(){{addAll(Item.getAllOres());}};
     private final ObjectSet<Item> itemSet = new ObjectSet<>();
     /**Stores all ore quadtrants on the map.*/
     private ObjectMap<Item, ObjectSet<Tile>> ores;
     /**Tags all quadrants.*/
     private Bits[] structQuadrants;
+    /**Stores all damaged tile entities by team.*/
+    private ObjectSet<Tile>[] damagedTiles = new ObjectSet[Team.all.length];
 
     /**Maps teams to a map of flagged tiles by type.*/
     private ObjectSet<Tile>[][] flagMap = new ObjectSet[Team.all.length][BlockFlag.all.length];
@@ -64,12 +65,15 @@ public class BlockIndexer{
         });
 
         Events.on(WorldLoadEvent.class, event -> {
+            damagedTiles = new ObjectSet[Team.all.length];
             flagMap = new ObjectSet[Team.all.length][BlockFlag.all.length];
+
             for(int i = 0; i < flagMap.length; i++){
                 for(int j = 0; j < BlockFlag.all.length; j++){
                     flagMap[i][j] = new ObjectSet<>();
                 }
             }
+
             typeMap.clear();
             ores = null;
 
@@ -81,7 +85,13 @@ public class BlockIndexer{
 
             for(int x = 0; x < world.width(); x++){
                 for(int y = 0; y < world.height(); y++){
-                    process(world.tile(x, y));
+                    Tile tile = world.tile(x, y);
+
+                    process(tile);
+
+                    if(tile.entity != null && tile.entity.healthf() < 0.9999f){
+                        notifyTileDamaged(tile.entity);
+                    }
                 }
             }
 
@@ -97,6 +107,28 @@ public class BlockIndexer{
 
     private ObjectSet<Tile>[] getFlagged(Team team){
         return flagMap[team.ordinal()];
+    }
+
+    /**Returns all damaged tiles by team.*/
+    public ObjectSet<Tile> getDamaged(Team team){
+        returnArray.clear();
+
+        if(damagedTiles[team.ordinal()] == null){
+            damagedTiles[team.ordinal()] = new ObjectSet<>();
+        }
+
+        ObjectSet<Tile> set = damagedTiles[team.ordinal()];
+        for(Tile tile : set){
+            if(tile.entity == null || tile.entity.getTeam() != team || tile.entity.healthf() >= 0.9999f){
+                returnArray.add(tile);
+            }
+        }
+
+        for(Tile tile : returnArray){
+            set.remove(tile);
+        }
+
+        return set;
     }
 
     /**Get all allied blocks with a flag.*/
@@ -117,6 +149,15 @@ public class BlockIndexer{
         return returnArray;
     }
 
+    public void notifyTileDamaged(TileEntity entity){
+        if(damagedTiles[entity.getTeam().ordinal()] == null){
+            damagedTiles[entity.getTeam().ordinal()] = new ObjectSet<>();
+        }
+
+        ObjectSet<Tile> set = damagedTiles[entity.getTeam().ordinal()];
+        set.add(entity.tile);
+    }
+
     public TileEntity findTile(Team team, float x, float y, float range, Predicate<Tile> pred){
         TileEntity closest = null;
         float dst = 0;
@@ -130,7 +171,11 @@ public class BlockIndexer{
                     for(int ty = ry * structQuadrantSize; ty < (ry + 1) * structQuadrantSize && ty < world.height(); ty++){
                         Tile other = world.tile(tx, ty);
 
-                        if(other == null || other.entity == null || other.getTeam() != team || !pred.test(other) || !other.block().targetable) continue;
+                        if(other == null) continue;
+
+                        other = other.target();
+
+                        if(other.entity == null || other.getTeam() != team || !pred.test(other) || !other.block().targetable) continue;
 
                         TileEntity e = other.entity;
 
@@ -226,7 +271,7 @@ public class BlockIndexer{
         for(int x = quadrantX * structQuadrantSize; x < world.width() && x < (quadrantX + 1) * structQuadrantSize; x++){
             for(int y = quadrantY * structQuadrantSize; y < world.height() && y < (quadrantY + 1) * structQuadrantSize; y++){
                 Tile result = world.tile(x, y);
-                if(result.block().drops == null || !scanOres.contains(result.block().drops.item)) continue;
+                if( result == null || result.block().drops == null || !scanOres.contains(result.block().drops.item)) continue;
 
                 itemSet.add(result.block().drops.item);
             }

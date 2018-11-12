@@ -32,12 +32,12 @@ public class MenuFragment extends Fragment{
         });
 
         //discord icon in top right
-        parent.fill(c -> c.top().right().addButton("", "discord", ui.discord::show).size(81, 42)
+        parent.fill(c -> c.top().right().addButton("", "discord", ui.discord::show).size(84, 45)
                 .visible(() -> state.is(State.menu)));
 
         //info icon
         if(mobile){
-            parent.fill(c -> c.top().left().addButton("", "info", ui.about::show).size(81, 42)
+            parent.fill(c -> c.top().left().addButton("", "info", ui.about::show).size(84, 45)
                     .visible(() -> state.is(State.menu)));
         }
 
@@ -132,9 +132,7 @@ public class MenuFragment extends Fragment{
 
             out.row();
 
-            if(!gwt){
-                out.add(new MenuButton("icon-exit", "$text.quit", Gdx.app::exit)).width(bw).colspan(2);
-            }
+            out.add(new MenuButton("icon-exit", "$text.quit", Gdx.app::exit)).width(bw).colspan(2);
         });
     }
 
@@ -153,12 +151,8 @@ public class MenuFragment extends Fragment{
         dialog.content().row();
 
         dialog.content().add(new MenuButton("icon-add", "$text.joingame", () -> {
-            if(!gwt){
-                ui.join.show();
-                dialog.hide();
-            }else{
-                ui.showInfo("$text.web.unsupported");
-            }
+            ui.join.show();
+            dialog.hide();
         }));
 
         dialog.content().add(new MenuButton("icon-editor", "$text.customgame", () -> {

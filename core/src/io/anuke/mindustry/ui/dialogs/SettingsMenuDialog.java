@@ -50,11 +50,7 @@ public class SettingsMenuDialog extends SettingsDialog{
         shown(() -> {
             if(!state.is(State.menu)){
                 wasPaused = state.is(State.paused);
-                if(ui.paused.getScene() != null){
-                    wasPaused = ui.paused.wasPaused;
-                }
-                if(!Net.active()) state.set(State.paused);
-                ui.paused.hide();
+                state.set(State.paused);
             }
         });
 
@@ -134,13 +130,16 @@ public class SettingsMenuDialog extends SettingsDialog{
         sound.volumePrefs();
 
         game.screenshakePref();
-        //game.checkPref("smoothcam", true);
         game.checkPref("effects", true);
         if(mobile){
             game.checkPref("autotarget", true);
         }
-        //game.sliderPref("sensitivity", 100, 10, 300, i -> i + "%");
-        game.sliderPref("saveinterval", 60, 10, 5 * 120, i -> Bundles.format("setting.seconds", i));
+        game.sliderPref("saveinterval", 120, 10, 5 * 120, i -> Bundles.format("setting.seconds", i));
+
+        if(!mobile){
+            game.checkPref("crashreport", true);
+        }
+
         game.pref(new Setting(){
             @Override
             public void add(SettingsTable table){
@@ -175,11 +174,8 @@ public class SettingsMenuDialog extends SettingsDialog{
                             Settings.prefs().put(map);
                             Settings.save();
 
-                            if(!gwt){
-                                Settings.prefs().clear();
-                                for(FileHandle file : dataDirectory.list()){
-                                    file.deleteDirectory();
-                                }
+                            for(FileHandle file : dataDirectory.list()){
+                                file.deleteDirectory();
                             }
 
                             Gdx.app.exit();
@@ -193,19 +189,9 @@ public class SettingsMenuDialog extends SettingsDialog{
             }
         });
 
-        if(!gwt){
-            graphics.sliderPref("fpscap", 125, 5, 125, 5, s -> (s > 120 ? Bundles.get("setting.fpscap.none") : Bundles.format("setting.fpscap.text", s)));
-        }
+        graphics.sliderPref("fpscap", 125, 5, 125, 5, s -> (s > 120 ? Bundles.get("setting.fpscap.none") : Bundles.format("setting.fpscap.text", s)));
 
-        if(!gwt){
-            graphics.checkPref("multithread", mobile, threads::setEnabled);
-
-            if(Settings.getBool("multithread")){
-                threads.setEnabled(true);
-            }
-        }
-
-        if(!mobile && !gwt){
+        if(!mobile){
             graphics.checkPref("vsync", true, b -> Gdx.graphics.setVSync(b));
             graphics.checkPref("fullscreen", false, b -> {
                 if(b){

@@ -3,6 +3,7 @@ package io.anuke.mindustry.ui.dialogs;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.Align;
+import com.badlogic.gdx.utils.Scaling;
 import io.anuke.mindustry.game.Difficulty;
 import io.anuke.mindustry.game.GameMode;
 import io.anuke.mindustry.maps.Map;
@@ -48,7 +49,7 @@ public class CustomGameDialog extends FloatingDialog{
         modes.marginBottom(5);
 
         for(GameMode mode : GameMode.values()){
-            if(mode.hidden || (mode.isPvp && gwt)) continue;
+            if(mode.hidden) continue;
 
             modes.addButton("$mode." + mode.name() + ".name", "toggle", () -> state.mode = mode)
                 .update(b -> b.setChecked(state.mode == mode)).group(group).size(140f, 54f).padBottom(-5);
@@ -101,11 +102,12 @@ public class CustomGameDialog extends FloatingDialog{
             image.getImageCell().size(images);
             image.top();
             image.row();
-            image.add("[accent]" + Bundles.get("map." + map.name + ".name", map.name)).pad(3f).growX().wrap().get().setAlignment(Align.center, Align.center);
+            image.add("[accent]" + map.getDisplayName()).pad(3f).growX().wrap().get().setAlignment(Align.center, Align.center);
             image.row();
             image.label((() -> Bundles.format("text.level.highscore", Settings.getInt("hiscore" + map.name, 0)))).pad(3f);
 
             BorderImage border = new BorderImage(map.texture, 3f);
+            border.setScaling(Scaling.fit);
             image.replaceImage(border);
 
             image.clicked(() -> {

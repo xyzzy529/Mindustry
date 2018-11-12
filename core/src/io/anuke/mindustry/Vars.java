@@ -78,8 +78,6 @@ public class Vars{
     public static boolean mobile;
     public static boolean ios;
     public static boolean android;
-    //shorthand for whether or not this is running on GWT
-    public static boolean gwt;
     //main data directory
     public static FileHandle dataDirectory;
     //directory for user-created map data
@@ -88,8 +86,6 @@ public class Vars{
     public static FileHandle saveDirectory;
     public static String mapExtension = "mmap";
     public static String saveExtension = "msav";
-    //scale of the font
-    public static float fontScale;
     //camera zoom displayed on startup
     public static int baseCameraScale;
     public static boolean showBlockDebug = false;
@@ -98,6 +94,7 @@ public class Vars{
     public static float controllerMin = 0.25f;
     public static float baseControllerSpeed = 11f;
     public static boolean snapCamera = true;
+
     public static ContentLoader content;
     public static GameState state;
     public static ThreadHandler threads;
@@ -139,7 +136,7 @@ public class Vars{
             }
         }
 
-        Arrays.sort(locales, (l1, l2) -> Platform.instance.getLocaleName(l1).compareTo(Platform.instance.getLocaleName(l2)));
+        Arrays.sort(locales, (l1, l2) -> l1.getDisplayName(l1).compareTo(l2.getDisplayName(l2)));
         Version.init();
 
         content = new ContentLoader();
@@ -166,20 +163,16 @@ public class Vars{
             });
         }
 
-        threads = new ThreadHandler(Platform.instance.getThreadProvider());
+        state = new GameState();
+        threads = new ThreadHandler();
 
         mobile = Gdx.app.getType() == ApplicationType.Android || Gdx.app.getType() == ApplicationType.iOS || testMobile;
         ios = Gdx.app.getType() == ApplicationType.iOS;
         android = Gdx.app.getType() == ApplicationType.Android;
-        gwt = Gdx.app.getType() == ApplicationType.WebGL;
 
-        if(!gwt){
-            dataDirectory = OS.getAppDataDirectory(appName);
-            customMapDirectory = dataDirectory.child("maps/");
-            saveDirectory = dataDirectory.child("saves/");
-        }
-
-        fontScale = Math.max(Unit.dp.scl(1f) / 2f, 0.5f);
+        dataDirectory = OS.getAppDataDirectory(appName);
+        customMapDirectory = dataDirectory.child("maps/");
+        saveDirectory = dataDirectory.child("saves/");
         baseCameraScale = Math.round(Unit.dp.scl(4));
     }
 }
