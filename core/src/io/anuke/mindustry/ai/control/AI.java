@@ -3,9 +3,10 @@ package io.anuke.mindustry.ai.control;
 import com.badlogic.gdx.utils.IntMap;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.badlogic.gdx.utils.ObjectSet;
+import com.badlogic.gdx.utils.async.AsyncExecutor;
 import io.anuke.mindustry.ai.control.tasks.BuildBlockTask;
+import io.anuke.mindustry.ai.control.tasks.DrillTask;
 import io.anuke.mindustry.ai.control.tasks.MineTask;
-import io.anuke.mindustry.ai.control.tasks.PathfindTask;
 import io.anuke.mindustry.content.Items;
 import io.anuke.mindustry.content.blocks.CraftingBlocks;
 import io.anuke.mindustry.content.blocks.ProductionBlocks;
@@ -27,6 +28,8 @@ import static io.anuke.mindustry.Vars.unitGroups;
 import static io.anuke.mindustry.Vars.world;
 
 public class AI{
+    public static final AsyncExecutor executor = new AsyncExecutor(6);
+
     private final Team team;
     private ObjectMap<Block, ObjectSet<Tile>> blocks = new ObjectMap<>();
     private IntMap<Item> tags = new IntMap<>();
@@ -79,11 +82,11 @@ public class AI{
         Item toMine = Items.copper;
         int amount = core.items.get(toMine);
 
-        if(amount >= 300){
+        if(amount >= 150){
             createSmelter(drone);
-        }else if(amount >= 200){
+        }else if(amount >= 100){
             createDrill(drone, Items.lead);
-        }else if(amount >= 60){
+        }else if(amount >= 50){
             createDrill(drone, toMine);
         }else{
             mineItem(drone, toMine, 50);
@@ -107,9 +110,15 @@ public class AI{
     }
 
     void createDrill(WorkerDrone drone, Item item){
+        drone.beginTask(new DrillTask(drone.getClosestCore().tile, item));
+        /*
         BuildRequest req = getClosestDrillReq(drone, item);
-        drone.beginTask(new PathfindTask(world.tile(req.x + 2, req.y), item));
-        drone.beginTask(new BuildBlockTask(req));
+        if(req != null){
+            drone.beginTask(new PathfindTask(world.tile(req.x, req.y), item));
+            drone.beginTask(new BuildBlockTask(req));
+        }else{
+            mineItem(drone, item, 50);
+        }*/
     }
 
     BuildRequest getClosestDrillReq(WorkerDrone drone, Item item){

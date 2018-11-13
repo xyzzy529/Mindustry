@@ -29,6 +29,7 @@ import io.anuke.ucore.scene.ui.layout.Table;
 import io.anuke.ucore.util.Bundles;
 import io.anuke.ucore.util.EnumSet;
 import io.anuke.ucore.util.Mathf;
+import io.anuke.ucore.util.ThreadArray;
 
 import static io.anuke.mindustry.Vars.*;
 
@@ -104,7 +105,7 @@ public class Block extends BaseBlock {
     /**Whether the overdrive core has any effect on this block.*/
     public boolean canOverdrive = true;
 
-    protected Array<Tile> tempTiles = new Array<>();
+    protected Array<Tile> tempTiles = new ThreadArray<>();
     protected Color tempColor = new Color();
     protected TextureRegion[] blockIcon;
     protected TextureRegion[] icon;

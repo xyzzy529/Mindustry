@@ -1,9 +1,9 @@
 package io.anuke.mindustry.ai.control.tasks;
 
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.async.AsyncExecutor;
 import com.badlogic.gdx.utils.async.AsyncResult;
 import io.anuke.mindustry.Vars;
+import io.anuke.mindustry.ai.control.AI;
 import io.anuke.mindustry.ai.control.BfsFinder;
 import io.anuke.mindustry.ai.control.WorkTask;
 import io.anuke.mindustry.content.blocks.DistributionBlocks;
@@ -21,8 +21,6 @@ import io.anuke.mindustry.world.modules.ItemModule;
 import io.anuke.ucore.function.Predicate;
 
 public class PathfindTask implements WorkTask{
-    private static final AsyncExecutor executor = new AsyncExecutor(4);
-
     private AsyncResult<Array<Tile>> result;
     private boolean placed;
 
@@ -46,7 +44,7 @@ public class PathfindTask implements WorkTask{
     @Override
     public void update(WorkerDrone drone){
         if(result == null){
-            result = executor.submit(() -> BfsFinder.find(tile, goal));
+            result = AI.executor.submit(() -> BfsFinder.find(tile, goal));
         }else if(result.isDone()){
             Array<Tile> out = result.get();
 
