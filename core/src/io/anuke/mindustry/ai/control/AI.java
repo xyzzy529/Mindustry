@@ -111,20 +111,6 @@ public class AI{
 
     void createDrill(WorkerDrone drone, Item item){
         drone.beginTask(new DrillTask(drone.getClosestCore().tile, item));
-        /*
-        BuildRequest req = getClosestDrillReq(drone, item);
-        if(req != null){
-            drone.beginTask(new PathfindTask(world.tile(req.x, req.y), item));
-            drone.beginTask(new BuildBlockTask(req));
-        }else{
-            mineItem(drone, item, 50);
-        }*/
-    }
-
-    BuildRequest getClosestDrillReq(WorkerDrone drone, Item item){
-        Tile tile = world.indexer.findClosestOre(drone.x, drone.y, item, drillBlock, team);
-        if(tile == null) return null;
-        return new BuildRequest(tile.x, tile.y, 0, Recipe.getByResult(ProductionBlocks.mechanicalDrill));
     }
 
 }
