@@ -10,13 +10,12 @@ import io.anuke.mindustry.entities.units.UnitState;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.ucore.util.Log;
 import io.anuke.ucore.util.Mathf;
-import io.anuke.ucore.util.ThreadQueue;
 
 /**Drone controlled by AI.*/
 public class WorkerDrone extends FlyingUnit implements BuilderTrait{
     protected Array<WorkTask> tasks = new Array<>();
     protected Tile mineTile;
-    protected Queue<BuildRequest> placeQueue = new ThreadQueue<>();
+    protected Queue<BuildRequest> placeQueue = new Queue<>();
 
     public final UnitState work = new UnitState(){
         @Override

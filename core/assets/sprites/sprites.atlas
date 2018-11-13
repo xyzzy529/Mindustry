@@ -6472,14 +6472,14 @@ unit-icon-spirit
   index: -1
 unit-icon-worker
   rotate: false
-  xy: 420, 308
+  xy: 839, 359
   size: 12, 12
   orig: 12, 12
   offset: 0, 0
   index: -1
 worker
   rotate: false
-  xy: 420, 308
+  xy: 839, 359
   size: 12, 12
   orig: 12, 12
   offset: 0, 0

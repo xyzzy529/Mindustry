@@ -10,7 +10,9 @@ import io.anuke.mindustry.world.Tile;
 public class MineTask implements WorkTask{
     private final Item item;
     private final int amount;
+
     private Tile tile;
+    private int initialAmount;
 
     public MineTask(Item item, int amount) {
         this.item = item;
@@ -21,6 +23,7 @@ public class MineTask implements WorkTask{
     public void begin(WorkerDrone drone){
         drone.getPlaceQueue().clear();
         tile = Vars.world.indexer.findClosestOre(drone.x, drone.y, item);
+        initialAmount = drone.getClosestCore().items.get(item);
     }
 
     @Override
@@ -33,7 +36,7 @@ public class MineTask implements WorkTask{
             drone.finishTask();
         }
 
-        if(drone.getInventory().isFull() || drone.getClosestCore().items.has(item, amount)){
+        if(drone.getInventory().isFull() || drone.getClosestCore().items.has(item, initialAmount + amount)){
             drone.finishTask();
             drone.beginTask(new DepositTask());
         }
