@@ -1,32 +1,62 @@
-include 'desktop', 'core', 'kryonet', 'server', 'ios', 'annotations', 'tools', 'tests'
-
-Properties properties = new Properties()
-
-if(new File(settingsDir, 'local.properties').exists()){
-    properties.load(new File(settingsDir, 'local.properties').newDataInputStream())
-
-    if(properties.containsKey("sdk.dir")){
-        include 'android'
-    }else{
-        println("No android SDK dir found Not loading Android module.")
-    }
-}else{
-    println("No local.properties found. Not loading Android module.")
+if(JavaVersion.current().ordinal() < JavaVersion.VERSION_14.ordinal()){
+    throw new GradleException("!!! YOU MUST USE JAVA 14 OR ABOVE TO COMPILE AND RUN MINDUSTRY !!! Read the README. Your version: ${System.properties["java.version"]}")
 }
 
-if(System.properties["release"] == null || System.properties["release"] == "false"){
-    if (new File(settingsDir, '../uCore').exists()) {
-        include ':uCore'
-        project(':uCore').projectDir = new File(settingsDir, '../uCore')
+include 'desktop', 'core', 'server', 'ios', 'annotations', 'tools', 'tests'
+
+def use = { ... names ->
+    for(String name : names){
+        include(name)
+        project(name).projectDir = new File(settingsDir, "../${name.substring(1).replace(":", "/")}")
+    }
+}
+
+def hasSdk = System.getenv("ANDROID_HOME") != null
+
+if(new File(settingsDir, 'local.properties').exists()){
+	def properties = new Properties()
+	properties.load(new File(settingsDir, 'local.properties').newDataInputStream())
+	if(properties.containsKey("sdk.dir")) hasSdk = true
+}
+
+if(System.getenv("JITPACK") == "true") hasSdk = false
+
+if(hasSdk){
+	include 'android'
+}else{
+    println("No Android SDK found. Skipping Android module.")
+}
+
+if(!hasProperty("release")){
+    if(new File(settingsDir, '../Arc').exists()){
+        use(
+        ':Arc',
+        ':Arc:arc-core',
+        ':Arc:extensions',
+        ':Arc:extensions:freetype',
+        ':Arc:extensions:recorder',
+        ':Arc:extensions:arcnet',
+        ':Arc:extensions:packer',
+        ':Arc:extensions:g3d',
+        ':Arc:extensions:fx',
+        ':Arc:natives',
+        ':Arc:natives:natives-desktop',
+        ':Arc:natives:natives-android',
+        ':Arc:natives:natives-ios',
+        ':Arc:natives:natives-freetype-desktop',
+        ':Arc:natives:natives-freetype-android',
+        ':Arc:natives:natives-freetype-ios',
+        ':Arc:backends',
+        ':Arc:backends:backend-sdl',
+        ':Arc:backends:backend-android',
+        ':Arc:backends:backend-robovm',
+        ':Arc:backends:backend-headless'
+        )
     }
 
-    if (new File(settingsDir, '../GDXGifRecorder').exists()) {
-        include ':GDXGifRecorder'
-        project(':GDXGifRecorder').projectDir = new File(settingsDir, '../GDXGifRecorder')
-    }
-    if (new File(settingsDir, '../debug').exists()) {
-        include ':debug'
-        project(':debug').projectDir = new File(settingsDir, '../debug')
+    if(new File(settingsDir, '../Mindustry-Debug').exists()){
+        include(":debug")
+        project(":debug").projectDir = new File(settingsDir, "../Mindustry-Debug")
     }
 }else{
     println("Not including local repositories.")
